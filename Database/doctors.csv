@@ -1,0 +1,76 @@
+doctor_id,first_name,last_name,specialization,department_id,phone_number,years_experience,hospital_branch,email
+D001,David,Taylor,Dermatology,6,8322010158,17,Westside Clinic,dr.david.taylor@hospital.com
+D002,Jane,Davis,Gastroenterology,10,9004382050,24,Eastside Clinic,dr.jane.davis@hospital.com
+D003,Jane,Smith,Neurology,3,8737740598,19,Eastside Clinic,dr.jane.smith@hospital.com
+D004,David,Jones,Orthopedics,2,6594221991,28,Central Hospital,dr.david.jones@hospital.com
+D005,Sarah,Taylor,Internal Medicine,8,9118538547,26,Central Hospital,dr.sarah.taylor@hospital.com
+D006,Alex,Davis,Pediatrics,4,6570137231,23,Central Hospital,dr.alex.davis@hospital.com
+D007,Robert,Davis,Oncology,5,8217493115,26,Westside Clinic,dr.robert.davis@hospital.com
+D008,Linda,Brown,ENT,7,9069162601,5,Westside Clinic,dr.linda.brown@hospital.com
+D009,Sarah,Smith,Cardiology,1,7387087517,26,Central Hospital,dr.sarah.smith@hospital.com
+D010,Linda,Wilson,Endocrinology,9,6176383634,21,Eastside Clinic,dr.linda.wilson@hospital.com
+D011,Mark,Anderson,Nephrology,11,7821345690,18,Westside Clinic,dr.mark.anderson@hospital.com
+D012,Karen,Clark,Rheumatology,12,7569832145,15,Central Hospital,dr.karen.clark@hospital.com
+D013,Michael,Lee,Ophthalmology,13,7893214567,22,Eastside Clinic,dr.michael.lee@hospital.com
+D014,Amanda,Scott,Psychiatry,14,7923456789,16,Central Hospital,dr.amanda.scott@hospital.com
+D015,Steven,Hall,Pulmonology,15,7456789123,20,Westside Clinic,dr.steven.hall@hospital.com
+D016,Olivia,White,Neurology II,16,7145982365,14,Central Hospital,dr.olivia.white@hospital.com
+D017,Daniel,Lopez,Cardiology II,17,7985641230,21,Eastside Clinic,dr.daniel.lopez@hospital.com
+D018,Sophia,Turner,Oncology II,18,7658914320,19,Westside Clinic,dr.sophia.turner@hospital.com
+D019,Ethan,Garcia,Orthopedics II,19,7981452360,23,Central Hospital,dr.ethan.garcia@hospital.com
+D020,Isabella,Young,ENT II,20,7689543120,12,Eastside Clinic,dr.isabella.young@hospital.com
+D021,Henry,Walker,Geriatrics,21,7456981230,25,North Hospital,dr.henry.walker@hospital.com
+D022,Grace,King,Neonatology,22,7326541890,13,South Hospital,dr.grace.king@hospital.com
+D023,Lucas,Wright,Immunology,23,7234598170,17,Central Hospital,dr.lucas.wright@hospital.com
+D024,Mia,Martinez,Allergy,24,7564982130,11,Eastside Clinic,dr.mia.martinez@hospital.com
+D025,Noah,Adams,Rehabilitation,25,7412598630,14,Westside Clinic,dr.noah.adams@hospital.com
+D026,Emma,Johnson,Cardiology,1,7021345981,22,Eastside Clinic,dr.emma.johnson@hospital.com
+D027,James,Baker,Cardiology,1,7569823410,15,Westside Clinic,dr.james.baker@hospital.com
+D028,Liam,Clark,Orthopedics,2,7812456390,11,Central Hospital,dr.liam.clark@hospital.com
+D029,Charlotte,Davis,Orthopedics,2,7689123045,19,Eastside Clinic,dr.charlotte.davis@hospital.com
+D030,Amelia,Lopez,Neurology,3,7890456123,18,Central Hospital,dr.amelia.lopez@hospital.com
+D031,Mason,Anderson,Neurology,3,7981236540,12,North Hospital,dr.mason.anderson@hospital.com
+D032,Harper,Young,Pediatrics,4,7645981230,8,Central Hospital,dr.harper.young@hospital.com
+D033,Elijah,Walker,Pediatrics,4,7923615402,16,Westside Clinic,dr.elijah.walker@hospital.com
+D034,Ella,Turner,Oncology,5,7785412096,10,Eastside Clinic,dr.ella.turner@hospital.com
+D035,Aiden,Harris,Oncology,5,7156823049,14,Central Hospital,dr.aiden.harris@hospital.com
+D036,Evelyn,Green,Dermatology,6,7312456987,19,Westside Clinic,dr.evelyn.green@hospital.com
+D037,Lucas,Moore,Dermatology,6,7589123406,9,Eastside Clinic,dr.lucas.moore@hospital.com
+D038,Sofia,Morgan,ENT,7,7214589360,12,Central Hospital,dr.sofia.morgan@hospital.com
+D039,Jackson,Bennett,ENT,7,7896541032,17,North Hospital,dr.jackson.bennett@hospital.com
+D040,Avery,Reed,Internal Medicine,8,7456912380,15,South Hospital,dr.avery.reed@hospital.com
+D041,William,Evans,Internal Medicine,8,7569234109,20,Central Hospital,dr.william.evans@hospital.com
+D042,Abigail,Scott,Endocrinology,9,7982134560,13,Eastside Clinic,dr.abigail.scott@hospital.com
+D043,Benjamin,Adams,Endocrinology,9,7891546302,18,Central Hospital,dr.benjamin.adams@hospital.com
+D044,Emily,Collins,Gastroenterology,10,7645098231,11,South Hospital,dr.emily.collins@hospital.com
+D045,Oliver,Hughes,Gastroenterology,10,7986543210,9,Westside Clinic,dr.oliver.hughes@hospital.com
+D046,Madison,Price,Nephrology,11,7345698210,20,Central Hospital,dr.madison.price@hospital.com
+D047,Alexander,Gray,Nephrology,11,7489126305,18,Eastside Clinic,dr.alexander.gray@hospital.com
+D048,Isabella,Lopez,Rheumatology,12,7524691830,15,Westside Clinic,dr.isabella.lopez@hospital.com
+D049,Henry,Campbell,Rheumatology,12,7314598206,14,South Hospital,dr.henry.campbell@hospital.com
+D050,Eleanor,Ross,Ophthalmology,13,7945612308,13,Eastside Clinic,dr.eleanor.ross@hospital.com
+D051,Michael,Brooks,Ophthalmology,13,7893124560,12,Central Hospital,dr.michael.brooks@hospital.com
+D052,Sophia,Howard,Psychiatry,14,7426981309,8,Westside Clinic,dr.sophia.howard@hospital.com
+D053,Jack,Watson,Psychiatry,14,7982146309,19,South Hospital,dr.jack.watson@hospital.com
+D054,Scarlett,Wood,Pulmonology,15,7314689021,10,Eastside Clinic,dr.scarlett.wood@hospital.com
+D055,Logan,Cook,Pulmonology,15,7962451830,22,Central Hospital,dr.logan.cook@hospital.com
+D056,Grace,Murphy,Neurology II,16,7891562304,18,Westside Clinic,dr.grace.murphy@hospital.com
+D057,Daniel,Bailey,Neurology II,16,7312489056,15,Eastside Clinic,dr.daniel.bailey@hospital.com
+D058,Chloe,Ramirez,Cardiology II,17,7986541230,14,Central Hospital,dr.chloe.ramirez@hospital.com
+D059,Ethan,Parker,Cardiology II,17,7548912630,19,Westside Clinic,dr.ethan.parker@hospital.com
+D060,Lily,Peterson,Oncology II,18,7896541203,17,Eastside Clinic,dr.lily.peterson@hospital.com
+D061,Owen,Stewart,Oncology II,18,7569832140,21,Central Hospital,dr.owen.stewart@hospital.com
+D062,Zoe,Barnes,Orthopedics II,19,7213456890,18,South Hospital,dr.zoe.barnes@hospital.com
+D063,Wyatt,Mitchell,Orthopedics II,19,7345698120,20,Westside Clinic,dr.wyatt.mitchell@hospital.com
+D064,Lucy,Rogers,ENT II,20,7984561239,15,Eastside Clinic,dr.lucy.rogers@hospital.com
+D065,Samuel,Long,ENT II,20,7456983210,16,Central Hospital,dr.samuel.long@hospital.com
+D066,Nora,Foster,Geriatrics,21,7812456930,23,North Hospital,dr.nora.foster@hospital.com
+D067,Leo,Bryant,Geriatrics,21,7891456203,20,Eastside Clinic,dr.leo.bryant@hospital.com
+D068,Mila,Alexander,Neonatology,22,7345698209,10,Central Hospital,dr.mila.alexander@hospital.com
+D069,Jacob,Kelly,Neonatology,22,7124589630,13,South Hospital,dr.jacob.kelly@hospital.com
+D070,Victoria,Cox,Immunology,23,7984516203,15,Eastside Clinic,dr.victoria.cox@hospital.com
+D071,Matthew,Diaz,Immunology,23,7569824310,18,Central Hospital,dr.matthew.diaz@hospital.com
+D072,Layla,Richardson,Allergy,24,7214598302,9,Westside Clinic,dr.layla.richardson@hospital.com
+D073,Elena,Cooper,Allergy,24,7896541231,13,Eastside Clinic,dr.elena.cooper@hospital.com
+D074,Ryan,Rivera,Rehabilitation,25,7321456980,16,Central Hospital,dr.ryan.rivera@hospital.com
+D075,Aria,Edwards,Rehabilitation,25,7568932140,11,Westside Clinic,dr.aria.edwards@hospital.com
