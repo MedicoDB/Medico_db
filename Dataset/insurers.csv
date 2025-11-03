@@ -1,8 +1,0 @@
-insurer_id,code,name,payer_type
-1,AETNA,Aetna,commercial
-2,BCBS,Blue Cross Blue Shield,commercial
-3,CIGNA,Cigna,commercial
-4,HUMANA,Humana,commercial
-5,MEDICAID,Medicaid,public
-6,MEDICARE,Medicare,public
-7,UHC,UnitedHealthcare,commercial
