@@ -18,13 +18,7 @@ You need to have the following software installed on your machine:
 
 Follow these steps to set up your development environment.
 
-**1. Clone the repository**
-
-```bash
-git clone <your-repository-url>
-cd Medico_db
-```
-**2. Database Setup**
+**1. Database Setup**
 
 This project uses an automated script to create the database, build all tables, and load data from the CSV files.
 
@@ -46,9 +40,9 @@ This project uses an automated script to create the database, build all tables, 
     ```
     This script will create and populate the `medico_db` database.
 
-**3. Backend Setup**
+**2. Backend Setup**
 
-**4. Frontend Setup**
+**3. Frontend Setup**
 
 **1. Start the Backend Server**
 
