@@ -1,8 +1,7 @@
-import React from "react";
-import HomePage from "./HomePage";
+import PatientsPage from "./pages/PatientsPage.jsx";
+import EncountersPage from "./pages/EncountersPage.jsx";
 
-function App() {
-  return <HomePage />;
-}
-
-export default App;
+<Routes>
+  <Route path="/patients" element={<PatientsPage />} />
+  <Route path="/encounters" element={<EncountersPage />} />
+</Routes>
