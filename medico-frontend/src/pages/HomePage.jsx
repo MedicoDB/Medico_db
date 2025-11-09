@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import "./HomePage.css";
 
 const HomePage = () => {
@@ -13,9 +14,7 @@ const HomePage = () => {
 
         <nav className="hp-nav">
           <p className="hp-nav-title">Main</p>
-          <button className="hp-nav-item hp-nav-item--active">
-            Dashboard
-          </button>
+          <button className="hp-nav-item hp-nav-item--active">Dashboard</button>
           <button className="hp-nav-item">Patients</button>
           <button className="hp-nav-item">Encounters</button>
           <button className="hp-nav-item">Procedures</button>
@@ -40,8 +39,7 @@ const HomePage = () => {
           <div>
             <h1 className="hp-page-title">Hospital Overview</h1>
             <p className="hp-page-subtitle">
-              Centralized view of patients, encounters, procedures and
-              medications.
+              Centralized view of patients, encounters, procedures and medications.
             </p>
           </div>
           <div className="hp-topbar-actions">
@@ -57,13 +55,10 @@ const HomePage = () => {
         <section className="hp-hero">
           <div className="hp-hero-left">
             <h2 className="hp-hero-title">
-              Smarter Hospital Management with{" "}
-              <span>Medico Platform</span>
+              Smarter Hospital Management with <span>Medico Platform</span>
             </h2>
             <p className="hp-hero-text">
-              Monitor patient journeys from admission to discharge, track
-              procedures & medications, and keep financials aligned –
-              all from a single modern dashboard.
+              Monitor patient journeys from admission to discharge, track procedures & medications, and keep financials aligned – all from a single modern dashboard.
             </p>
             <div className="hp-hero-actions">
               <button className="hp-primary-btn">View Live Dashboard</button>
@@ -133,41 +128,33 @@ const HomePage = () => {
             <div className="hp-card">
               <div className="hp-card-icon hp-card-icon--patients">👤</div>
               <h4>Patients</h4>
-              <p>
-                Search and manage patient profiles, demographics and
-                contact information.
-              </p>
+              <p>Search and manage patient profiles, demographics and contact information.</p>
               <button className="hp-link-btn">Go to Patients →</button>
             </div>
 
             <div className="hp-card">
               <div className="hp-card-icon hp-card-icon--encounters">📋</div>
               <h4>Encounters</h4>
-              <p>
-                Track visits, admission details, diagnoses and overall
-                patient journey.
-              </p>
+              <p>Track visits, admission details, diagnoses and overall patient journey.</p>
               <button className="hp-link-btn">Go to Encounters →</button>
             </div>
 
             <div className="hp-card">
               <div className="hp-card-icon hp-card-icon--procedures">🧪</div>
               <h4>Procedures</h4>
-              <p>
-                View procedures linked to encounters and providers,
-                including costs and codes.
-              </p>
-              <button className="hp-link-btn">Manage Procedures →</button>
+              <p>View procedures linked to encounters and providers, including costs and codes.</p>
+              <Link to="/procedures">
+                <button className="hp-link-btn">Manage Procedures →</button>
+              </Link>
             </div>
 
             <div className="hp-card">
               <div className="hp-card-icon hp-card-icon--medications">💊</div>
               <h4>Medications</h4>
-              <p>
-                Review medication history, prescribed dosages and
-                prescriber information.
-              </p>
-              <button className="hp-link-btn">View Medications →</button>
+              <p>Review medication history, prescribed dosages and prescriber information.</p>
+              <Link to="/medications">
+                <button className="hp-link-btn">View Medications →</button>
+              </Link>
             </div>
           </div>
         </section>
@@ -177,10 +164,7 @@ const HomePage = () => {
           <div className="hp-section-panel">
             <h3>Why this matters for the project?</h3>
             <p>
-              This UI is built around real relations: patient → encounter
-              → procedure / medication, plus billing and denials. It helps
-              you visually validate database design and SQL queries from
-              the backend.
+              This UI is built around real relations: patient → encounter → procedure / medication, plus billing and denials. It helps you visually validate database design and SQL queries from the backend.
             </p>
             <ul className="hp-list">
               <li>Visual proof of your ERD and foreign keys</li>
@@ -193,14 +177,8 @@ const HomePage = () => {
             <h3>Next steps for you (Frontend)</h3>
             <ol className="hp-list hp-list--ordered">
               <li>Connect this page to real API endpoints.</li>
-              <li>
-                Add real navigation to Procedures & Medications pages
-                you’ll build.
-              </li>
-              <li>
-                Replace static numbers with live stats from encounters,
-                procedures and medications tables.
-              </li>
+              <li>Add real navigation to Procedures & Medications pages you’ll build.</li>
+              <li>Replace static numbers with live stats from encounters, procedures and medications tables.</li>
             </ol>
           </div>
         </section>
@@ -210,3 +188,4 @@ const HomePage = () => {
 };
 
 export default HomePage;
+
