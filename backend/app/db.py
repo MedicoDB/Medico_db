@@ -1,5 +1,5 @@
 import mysql.connector
-from ...settings import DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, DB_PORT
+from settings import DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, DB_PORT
 
 def get_conn():
     
