@@ -26,15 +26,15 @@ CREATE_TABLES_SQL = [
         gender VARCHAR(50),
         ethnicity VARCHAR(100),
         insurance_type VARCHAR(50),
-        marital_status VARCHAR(50),
-        address TEXT,
-        city VARCHAR(100),
-        state VARCHAR(50),
-        zip VARCHAR(20),
-        phone VARCHAR(50),
-        email VARCHAR(255),
+        marital_status VARCHAR(50) DEFAULT 'unknown',
+        address TEXT DEFAULT NULL,
+        city VARCHAR(100) DEFAULT NULL,
+        state VARCHAR(50) DEFAULT NULL,
+        zip VARCHAR(20) DEFAULT NULL,
+        phone VARCHAR(50) DEFAULT NULL,
+        email VARCHAR(255) DEFAULT NULL,
         registration_date DATE,
-        FOREIGN KEY (insurance_type) REFERENCES insurers(code)
+        FOREIGN KEY (insurance_type) REFERENCES insurers(code) ON DELETE SET NULL ON UPDATE CASCADE
     );
     """,
     """
@@ -44,13 +44,13 @@ CREATE_TABLES_SQL = [
         department VARCHAR(255),
         specialty VARCHAR(255),
         npi VARCHAR(50),
-        inhouse BOOLEAN,
+        inhouse BOOLEAN DEFAULT 1,
         location VARCHAR(50),
         years_experience INT,
-        contact_info VARCHAR(50),
-        email VARCHAR(255),
+        contact_info VARCHAR(50) DEFAULT NULL,
+        email VARCHAR(255) DEFAULT NULL,
         head_id INT,
-        FOREIGN KEY (head_id) REFERENCES specialty_heads(head_id)
+        FOREIGN KEY (head_id) REFERENCES specialty_heads(head_id) ON DELETE SET NULL ON UPDATE CASCADE
     );
     """,
     """
@@ -63,13 +63,13 @@ CREATE_TABLES_SQL = [
         department VARCHAR(255),
         reason_for_visit TEXT,
         diagnosis_code VARCHAR(50),
-        admission_type VARCHAR(100),
-        discharge_date DATE,
-        length_of_stay INT,
-        status VARCHAR(100),
-        readmitted_flag BOOLEAN,
-        FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
-        FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
+        admission_type VARCHAR(100) DEFAULT NULL,
+        discharge_date DATE DEFAULT NULL,
+        length_of_stay INT DEFAULT 0,
+        status VARCHAR(100) DEFAULT 'Completed',
+        readmitted_flag BOOLEAN DEFAULT 0,
+        FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+        FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE SET NULL ON UPDATE CASCADE
     );
     """,
     """
@@ -77,10 +77,10 @@ CREATE_TABLES_SQL = [
         diagnosis_id VARCHAR(50) PRIMARY KEY,
         encounter_id VARCHAR(50),
         diagnosis_code VARCHAR(50),
-        diagnosis_description TEXT,
-        primary_flag BOOLEAN,
+        diagnosis_description TEXT DEFAULT 'Not provided',
+        primary_flag BOOLEAN DEFAULT 1,
         chronic_flag BOOLEAN,
-        FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id)
+        FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id) ON DELETE CASCADE ON UPDATE CASCADE
     );
     """,
     """
@@ -88,12 +88,12 @@ CREATE_TABLES_SQL = [
         procedure_id VARCHAR(50) PRIMARY KEY,
         encounter_id VARCHAR(50),
         procedure_code VARCHAR(50),
-        procedure_description TEXT,
+        procedure_description TEXT DEFAULT 'Not provided',
         procedure_date DATE,
         provider_id VARCHAR(50),
         procedure_cost DECIMAL(10, 2),
-        FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id),
-        FOREIGN KEY (provider_id) REFERENCES providers(provider_id)
+        FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE SET NULL ON UPDATE CASCADE
     );
     """,
     """
@@ -105,11 +105,11 @@ CREATE_TABLES_SQL = [
         test_code VARCHAR(50),
         specimen_type VARCHAR(100),
         test_result VARCHAR(255),
-        units VARCHAR(50),
-        normal_range VARCHAR(100),
+        units VARCHAR(50) DEFAULT 'N/A',
+        normal_range VARCHAR(100) DEFAULT 'N/A',
         test_date DATE,
         status VARCHAR(100),
-        FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id)
+        FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id) ON DELETE CASCADE ON UPDATE CASCADE
     );
     """,
     """
@@ -124,8 +124,8 @@ CREATE_TABLES_SQL = [
         prescribed_date DATE,
         prescriber_id VARCHAR(50),
         cost DECIMAL(10, 2),
-        FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id),
-        FOREIGN KEY (prescriber_id) REFERENCES providers(provider_id)
+        FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+        FOREIGN KEY (prescriber_id) REFERENCES providers(provider_id) ON DELETE SET NULL ON UPDATE CASCADE
     );
     """,
     """
@@ -140,9 +140,9 @@ CREATE_TABLES_SQL = [
         billed_amount DECIMAL(10, 2),
         paid_amount DECIMAL(10, 2),
         claim_status VARCHAR(100),
-        denial_reason TEXT,
-        FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
-        FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id)
+        denial_reason TEXT DEFAULT NULL,
+        FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+        FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id) ON DELETE RESTRICT ON UPDATE CASCADE
     );
     """,
     """
@@ -154,10 +154,11 @@ CREATE_TABLES_SQL = [
         denied_amount DECIMAL(10, 2),
         denial_date DATE,
         appeal_filed VARCHAR(10),
-        appeal_status VARCHAR(100),
-        appeal_resolution_date DATE,
-        final_outcome VARCHAR(100),
-        FOREIGN KEY (claim_id) REFERENCES claims_and_billing(claim_id)
+        appeal_status VARCHAR(100) DEFAULT NULL,
+        appeal_resolution_date DATE DEFAULT NULL,
+        final_outcome VARCHAR(100) DEFAULT NULL,
+        FOREIGN KEY (claim_id) REFERENCES claims_and_billing(claim_id) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT chk_appeal_details CHECK (LOWER(appeal_filed) != 'yes' OR (appeal_status IS NOT NULL AND appeal_resolution_date IS NOT NULL AND final_outcome IS NOT NULL))
     );
     """
 ]

@@ -45,7 +45,7 @@ def setup_database():
         print("\nLoading data from CSV files...")
         
         script_dir = os.path.dirname(__file__) 
-        dataset_path = os.path.abspath(os.path.join(script_dir, '..', 'Dataset_renewed'))
+        dataset_path = os.path.abspath(os.path.join(script_dir, 'Dataset_renewed'))
 
         csv_files_in_order = [
             ('insurers', 'insurers.csv', ''),
