@@ -23,3 +23,6 @@ def get_all_denials():
         return jsonify(denials)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
+    
