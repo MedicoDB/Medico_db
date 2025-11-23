@@ -1,5 +1,5 @@
 import React from "react";
-import "../HomePage.css"; // aynı stiller kullanılacak
+import "../pages/HomePage.css"; // aynı stiller kullanılacak
 
 const SharedLayout = ({ title, subtitle, children, activePage }) => {
   return (
