@@ -1,8 +1,38 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import "./HomePage.css";
+import { api } from "../services/api";
 
 const HomePage = () => {
+  const [stats, setStats] = useState({
+    active_patients: 0,
+    open_encounters: 0,
+    procedures_today: 0,
+    medications_issued: 0,
+    avg_stay: 0,
+    claims_approval_rate: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const data = await api.getDashboardStats();
+        setStats(data);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching dashboard stats:", err);
+        setError("Failed to load dashboard statistics");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   return (
     <div className="hp-root">
       {/* Sidebar */}
@@ -14,11 +44,21 @@ const HomePage = () => {
 
         <nav className="hp-nav">
           <p className="hp-nav-title">Main</p>
-          <button className="hp-nav-item hp-nav-item--active">Dashboard</button>
-          <button className="hp-nav-item">Patients</button>
-          <button className="hp-nav-item">Encounters</button>
-          <button className="hp-nav-item">Procedures</button>
-          <button className="hp-nav-item">Medications</button>
+          <Link to="/">
+            <button className="hp-nav-item hp-nav-item--active">Dashboard</button>
+          </Link>
+          <Link to="/patients">
+            <button className="hp-nav-item">Patients</button>
+          </Link>
+          <Link to="/encounters">
+            <button className="hp-nav-item">Encounters</button>
+          </Link>
+          <Link to="/procedures">
+            <button className="hp-nav-item">Procedures</button>
+          </Link>
+          <Link to="/medications">
+            <button className="hp-nav-item">Medications</button>
+          </Link>
 
           <p className="hp-nav-title hp-nav-title--secondary">Analytics</p>
           <button className="hp-nav-item">Billing & Claims</button>
@@ -61,8 +101,8 @@ const HomePage = () => {
               Monitor patient journeys from admission to discharge, track procedures & medications, and keep financials aligned – all from a single modern dashboard.
             </p>
             <div className="hp-hero-actions">
-              <button className="hp-primary-btn">View Live Dashboard</button>
-              <button className="hp-secondary-btn">Quick Demo Data</button>
+              <button className="hp-primary-btn" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>View Live Dashboard</button>
+              <button className="hp-secondary-btn" onClick={() => alert('Demo data is already loaded! Check the Patients, Encounters, Procedures, and Medications pages to see real data from your database.')}>Quick Demo Data</button>
             </div>
             <div className="hp-hero-meta">
               <span>✓ Real hospital dataset</span>
@@ -73,32 +113,38 @@ const HomePage = () => {
 
           <div className="hp-hero-right">
             <div className="hp-hero-card hp-hero-card--gradient">
-              <p className="hp-hero-card-label">Today’s Snapshot</p>
-              <div className="hp-hero-card-grid">
-                <div>
-                  <p className="hp-hero-card-number">128</p>
-                  <p className="hp-hero-card-caption">Active Patients</p>
+              <p className="hp-hero-card-label">Today's Snapshot</p>
+              {loading ? (
+                <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>
+              ) : error ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#ff4444' }}>{error}</div>
+              ) : (
+                <div className="hp-hero-card-grid">
+                  <div>
+                    <p className="hp-hero-card-number">{stats.active_patients}</p>
+                    <p className="hp-hero-card-caption">Active Patients</p>
+                  </div>
+                  <div>
+                    <p className="hp-hero-card-number">{stats.open_encounters}</p>
+                    <p className="hp-hero-card-caption">Open Encounters</p>
+                  </div>
+                  <div>
+                    <p className="hp-hero-card-number">{stats.procedures_today}</p>
+                    <p className="hp-hero-card-caption">Procedures Today</p>
+                  </div>
+                  <div>
+                    <p className="hp-hero-card-number">{stats.medications_issued}</p>
+                    <p className="hp-hero-card-caption">Medications Issued</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="hp-hero-card-number">63</p>
-                  <p className="hp-hero-card-caption">Open Encounters</p>
-                </div>
-                <div>
-                  <p className="hp-hero-card-number">214</p>
-                  <p className="hp-hero-card-caption">Procedures Today</p>
-                </div>
-                <div>
-                  <p className="hp-hero-card-number">97</p>
-                  <p className="hp-hero-card-caption">Medications Issued</p>
-                </div>
-              </div>
+              )}
             </div>
 
             <div className="hp-hero-mini-cards">
               <div className="hp-mini-card">
                 <p className="hp-mini-label">Average stay</p>
                 <p className="hp-mini-main">
-                  3.1 <span>days</span>
+                  {loading ? '...' : stats.avg_stay} <span>days</span>
                 </p>
                 <p className="hp-mini-trend hp-mini-trend--up">
                   ▲ 8% better than last week
@@ -107,7 +153,7 @@ const HomePage = () => {
               <div className="hp-mini-card">
                 <p className="hp-mini-label">Claims approval</p>
                 <p className="hp-mini-main">
-                  92<span>%</span>
+                  {loading ? '...' : stats.claims_approval_rate}<span>%</span>
                 </p>
                 <p className="hp-mini-trend hp-mini-trend--neutral">
                   Stable vs last week
@@ -129,14 +175,18 @@ const HomePage = () => {
               <div className="hp-card-icon hp-card-icon--patients">👤</div>
               <h4>Patients</h4>
               <p>Search and manage patient profiles, demographics and contact information.</p>
-              <button className="hp-link-btn">Go to Patients →</button>
+              <Link to="/patients">
+                <button className="hp-link-btn">Go to Patients →</button>
+              </Link>
             </div>
 
             <div className="hp-card">
               <div className="hp-card-icon hp-card-icon--encounters">📋</div>
               <h4>Encounters</h4>
               <p>Track visits, admission details, diagnoses and overall patient journey.</p>
-              <button className="hp-link-btn">Go to Encounters →</button>
+              <Link to="/encounters">
+                <button className="hp-link-btn">Go to Encounters →</button>
+              </Link>
             </div>
 
             <div className="hp-card">
