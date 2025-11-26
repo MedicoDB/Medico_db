@@ -754,6 +754,34 @@ class ClaimsAndBillingModel:
         finally:
             if conn and conn.is_connected(): cursor.close(); conn.close()
 
+    @staticmethod
+    def get_claim_statistics():
+        """
+        GROUP BY kullanarak her statüdeki fatura sayısını ve toplam tutarı hesaplar.
+        Ödev gereksinimi: GROUP BY Usage
+        """
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            
+            # GROUP BY Sorgusu: Statüye göre grupla, sayısını ve toplam tutarını al
+            query = """
+                SELECT 
+                    claim_status, 
+                    COUNT(*) as count, 
+                    SUM(billed_amount) as total_amount
+                FROM claims_and_billing
+                GROUP BY claim_status
+                ORDER BY total_amount DESC
+            """
+            cursor.execute(query)
+            return cursor.fetchall()
+        except Error as e:
+            raise Error(f"Error fetching statistics: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
 class DenialsModel:
     """Data Access Object for the denials table."""
 
@@ -809,3 +837,24 @@ class DenialsModel:
             raise Error(f"Error: {e}")
         finally:
             if conn and conn.is_connected(): cursor.close(); conn.close()
+    
+    @staticmethod
+    def delete(denial_id):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            
+            # SQL Silme Sorgusu
+            cursor.execute("DELETE FROM denials WHERE denial_id = %s", (denial_id,))
+            conn.commit()
+            
+            # Eğer bir satır silindiyse True, silinmediyse False döndür
+            return cursor.rowcount > 0
+        except Error as e:
+            if conn: conn.rollback()
+            raise Error(f"Error deleting denial: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+    

@@ -299,7 +299,7 @@ def register_routes(app):
         }
         
         try:
-            # Modelden veriyi çek (get_all fonksiyonu parametreleri artık models.py ile uyumlu)
+            # Claims verisini çek (Eski kod)
             claims = ClaimsAndBillingModel.get_all(
                 limit=1000, 
                 search=search or None, 
@@ -308,9 +308,14 @@ def register_routes(app):
                 sort_dir=direction
             )
             
+            # YENİ EKLENEN KISIM: İstatistikleri çekiyoruz
+            claim_stats = ClaimsAndBillingModel.get_claim_statistics()
+            
+            # render_template içine 'claim_stats' değişkenini ekliyoruz
             return render_template(
                 'claims/list.html', 
                 claims=claims, 
+                claim_stats=claim_stats,  # <--- YENİ EKLENDİ
                 search_query=search, 
                 filters=filters, 
                 filters_active=_has_filters(filters), 
@@ -459,3 +464,20 @@ def register_routes(app):
             return redirect(url_for('denials_list'))
 
     app.add_url_rule('/denials/<denial_id>', 'denial_view', denial_view, methods=['GET'])
+
+    # ... denial_view fonksiyonunun bittiği yerin hemen altına ...
+
+    def denial_delete(denial_id):
+        if request.method == 'POST':
+            try:
+                if DenialsModel.delete(denial_id):
+                    flash('Denial record deleted successfully!', 'success')
+                else:
+                    flash('Could not delete record.', 'warning')
+            except Error as e:
+                flash(f'Error: {str(e)}', 'danger')
+        # Silme işleminden sonra listeye geri dön
+        return redirect(url_for('denials_list'))
+
+    # Bu satır Flask'a rotayı tanıtır:
+    app.add_url_rule('/denials/<denial_id>/delete', 'denial_delete', denial_delete, methods=['POST'])
