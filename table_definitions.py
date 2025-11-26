@@ -151,17 +151,21 @@ CREATE_TABLES_SQL = [
         denial_id VARCHAR(50) PRIMARY KEY,
         denial_reason_code VARCHAR(50),
         denial_reason_description TEXT,
-        denied_amount DECIMAL(10, 2),
+        denied_amount DECIAMAL(10, 2),
         denial_date DATE,
         appeal_filed VARCHAR(10),
         appeal_status VARCHAR(100) DEFAULT NULL,
         appeal_resolution_date DATE DEFAULT NULL,
         final_outcome VARCHAR(100) DEFAULT NULL,
-        FOREIGN KEY (claim_id) REFERENCES claims_and_billing(claim_id) ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (claim_id) REFERENCES claims_and_billing(claim_id) ON DELETE RESTRICT ON UPDATE CASCADE,
         CONSTRAINT chk_appeal_details CHECK (LOWER(appeal_filed) != 'yes' OR (appeal_status IS NOT NULL AND appeal_resolution_date IS NOT NULL AND final_outcome IS NOT NULL))
     );
     """
 ]
 
 # Placeholder for future triggers. Currently we rely on application-level validation.
-CREATE_TRIGGERS_SQL = []
+# table_definitions.py dosyasının en altı:
+
+CREATE_TRIGGERS_SQL = [
+   
+]

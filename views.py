@@ -3,7 +3,7 @@ Flask routes for the Hospital Management System.
 """
 from flask import render_template, request, redirect, url_for, flash
 from models import (
-    PatientsModel, EncountersModel, InsurersModel, ClaimsAndBillingModel, ProvidersModel
+    PatientsModel, EncountersModel, InsurersModel, ClaimsAndBillingModel, ProvidersModel, DenialsModel
 )
 from db import get_db_connection, get_db_cursor
 from mysql.connector import Error
@@ -12,6 +12,9 @@ PATIENT_SORT_OPTIONS = [("registration_date", "Registration Date"), ("patient_id
 PATIENT_GENDER_OPTIONS = ["Male", "Female", "Other"]
 ENCOUNTER_SORT_OPTIONS = [("visit_date", "Visit Date"), ("encounter_id", "ID"), ("patient_id", "Patient ID"), ("provider_id", "Provider ID"), ("department", "Department"), ("visit_type", "Type"), ("status", "Status")]
 ENCOUNTER_STATUS_OPTIONS = ["Scheduled", "Completed", "In Progress", "Cancelled", "Discharged"]
+CLAIMS_SORT_OPTIONS = [("billing_id", "ID"), ("claim_date", "Claim Date"), ("encounter_id", "Encounter ID"), ("billed_amount", "Billed Amount"), ("claim_status", "Status")]
+CLAIMS_STATUS_OPTIONS = ["Pending", "Approved", "Denied", "Paid", "Submitted", "Rejected"]
+
 
 def _safe_int(value):
     try: return int(value)
@@ -276,3 +279,183 @@ def register_routes(app):
         return redirect(url_for('encounters_list'))
 
     app.add_url_rule('/encounters/<encounter_id>/delete', 'encounter_delete', encounter_delete, methods=['POST'])
+
+    # --- CLAIMS AND BILLING (Faturalandırma İşlemleri) ---
+
+    # --- CLAIMS AND BILLING (Faturalandırma İşlemleri) ---
+
+    def claims_list():
+        # Arama ve Filtreleme Parametrelerini Al
+        search = request.args.get('q', '').strip()
+        sort_by = request.args.get('sort', 'claim_date')
+        direction = request.args.get('direction', 'desc').lower()
+        
+        filters = {
+            'billing_id': _value_or_none(request.args.get('billing_id')),
+            'encounter_id': _value_or_none(request.args.get('encounter_id')),
+            'claim_status': _value_or_none(request.args.get('claim_status')),
+            'billed_amount_min': _safe_int(request.args.get('billed_amount_min')),
+            'claim_date_from': _value_or_none(request.args.get('claim_date_from'))
+        }
+        
+        try:
+            # Modelden veriyi çek (get_all fonksiyonu parametreleri artık models.py ile uyumlu)
+            claims = ClaimsAndBillingModel.get_all(
+                limit=1000, 
+                search=search or None, 
+                filters=filters, 
+                sort_by=sort_by, 
+                sort_dir=direction
+            )
+            
+            return render_template(
+                'claims/list.html', 
+                claims=claims, 
+                search_query=search, 
+                filters=filters, 
+                filters_active=_has_filters(filters), 
+                sort_options=CLAIMS_SORT_OPTIONS, 
+                status_options=CLAIMS_STATUS_OPTIONS, 
+                current_sort=sort_by, 
+                current_direction=direction
+            )
+        except Error as e:
+            flash(f'Error: {str(e)}', 'danger')
+            # Hata durumunda home sayfasına dön veya boş liste göster
+            return render_template('claims/list.html', claims=[], search_query='', filters={}, filters_active=False, sort_options=[], status_options=[])
+
+    app.add_url_rule('/claims', 'claims_list', claims_list, methods=['GET'])
+
+    def claim_view(billing_id):
+        try:
+            claim = ClaimsAndBillingModel.get_by_id(billing_id)
+            if not claim:
+                flash('Claim not found', 'danger')
+                return redirect(url_for('claims_list'))
+            
+            # İlişkili Denial (Red) kaydı var mı?
+            related_denial = None
+            if claim.get('claim_status') == 'Denied':
+                related_denial = DenialsModel.get_by_claim_id(claim['claim_id'])
+
+            # İlişkili Encounter detaylarını çek
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            cursor.execute("""
+                SELECT e.*, p.first_name, p.last_name, pr.name as provider_name
+                FROM encounters e
+                INNER JOIN patients p ON e.patient_id = p.patient_id
+                LEFT JOIN providers pr ON e.provider_id = pr.provider_id
+                WHERE e.encounter_id = %s
+            """, (claim['encounter_id'],))
+            encounter_details = cursor.fetchone()
+            conn.close()
+            
+            return render_template('claims/view.html', claim=claim, encounter=encounter_details, denial=related_denial)
+        except Error as e:
+            flash(f'Error: {str(e)}', 'danger')
+            return redirect(url_for('claims_list'))
+
+    # BU SATIR EKSİK VEYA YANLIŞ OLABİLİR, MUTLAKA EKLE:
+    app.add_url_rule('/claims/<billing_id>', 'claim_view', claim_view, methods=['GET'])
+
+    def claim_add():
+        if request.method == 'GET':
+            try:
+                # Dropdown için Encounters listesini çek
+                encounters = EncountersModel.get_all(limit=500)
+                return render_template('claims/add.html', encounters=encounters, status_options=CLAIMS_STATUS_OPTIONS)
+            except Error as e:
+                flash(f'Error loading form: {str(e)}', 'danger')
+                return redirect(url_for('claims_list'))
+        
+        try:
+            # Form verilerini hazırla (models.py add metoduna uygun key isimleri ile)
+            data = {
+                'encounter_id': request.form.get('encounter_id'),
+                'insurance_provider': request.form.get('insurance_provider'),
+                'claim_billing_date': request.form.get('claim_billing_date'), # Formdaki name ile eşleşmeli
+                'billed_amount': request.form.get('billed_amount'),
+                'paid_amount': request.form.get('paid_amount'),
+                'claim_status': request.form.get('claim_status'),
+                'payment_method': request.form.get('payment_method'),
+                'denial_reason': request.form.get('denial_reason')
+            }
+            
+            new_id = ClaimsAndBillingModel.add(data)
+            flash(f'Claim {new_id} created successfully!', 'success')
+            return redirect(url_for('claim_view', billing_id=new_id))
+        except Error as e:
+            flash(f'Error creating claim: {str(e)}', 'danger')
+            return redirect(url_for('claims_list'))
+
+    app.add_url_rule('/claims/add', 'claim_add', claim_add, methods=['GET', 'POST'])
+
+    def claim_edit(billing_id):
+        if request.method == 'GET':
+            try:
+                claim = ClaimsAndBillingModel.get_by_id(billing_id)
+                if not claim: return redirect(url_for('claims_list'))
+                encounters = EncountersModel.get_all(limit=500)
+                return render_template('claims/edit.html', claim=claim, encounters=encounters, status_options=CLAIMS_STATUS_OPTIONS)
+            except Error as e:
+                flash(f'Error: {str(e)}', 'danger')
+                return redirect(url_for('claims_list'))
+        
+        try:
+            data = {
+                'encounter_id': request.form.get('encounter_id'),
+                'insurance_provider': request.form.get('insurance_provider'),
+                'claim_billing_date': request.form.get('claim_billing_date'),
+                'billed_amount': request.form.get('billed_amount'),
+                'paid_amount': request.form.get('paid_amount'),
+                'claim_status': request.form.get('claim_status'),
+                'payment_method': request.form.get('payment_method'),
+                'denial_reason': request.form.get('denial_reason')
+            }
+            ClaimsAndBillingModel.update(billing_id, data)
+            flash('Claim updated successfully!', 'success')
+            return redirect(url_for('claim_view', billing_id=billing_id))
+        except Error as e:
+            flash(f'Error updating claim: {str(e)}', 'danger')
+            return redirect(url_for('claims_list'))
+
+    app.add_url_rule('/claims/<billing_id>/edit', 'claim_edit', claim_edit, methods=['GET', 'POST'])
+
+    def claim_delete(billing_id):
+        if request.method == 'POST':
+            try:
+                if ClaimsAndBillingModel.delete(billing_id):
+                    flash('Claim deleted successfully!', 'success')
+                else:
+                    flash('Could not delete claim.', 'warning')
+            except Error as e:
+                flash(f'Error deleting claim: {str(e)}', 'danger')
+        return redirect(url_for('claims_list'))
+
+    app.add_url_rule('/claims/<billing_id>/delete', 'claim_delete', claim_delete, methods=['POST'])
+
+    # --- DENIALS (İtiraz Yönetimi) ---
+
+    def denials_list():
+        try:
+            denials = DenialsModel.get_all()
+            return render_template('denials/list.html', denials=denials)
+        except Error as e:
+            flash(f'Error: {str(e)}', 'danger')
+            return redirect(url_for('home'))
+
+    app.add_url_rule('/denials', 'denials_list', denials_list, methods=['GET'])
+
+    def denial_view(denial_id):
+        try:
+            denial = DenialsModel.get_by_id(denial_id)
+            if not denial:
+                flash('Denial record not found', 'danger')
+                return redirect(url_for('denials_list'))
+            return render_template('denials/view.html', denial=denial)
+        except Error as e:
+            flash(f'Error: {str(e)}', 'danger')
+            return redirect(url_for('denials_list'))
+
+    app.add_url_rule('/denials/<denial_id>', 'denial_view', denial_view, methods=['GET'])

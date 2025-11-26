@@ -481,7 +481,331 @@ class InsurersModel:
 class ClaimsAndBillingModel:
     """Data Access Object for the claims_and_billing table."""
 
+    SORTABLE_COLUMNS = {
+        "billing_id": "cb.billing_id",
+        "claim_date": "cb.claim_billing_date",
+        "encounter_id": "cb.encounter_id",
+        "billed_amount": "cb.billed_amount",
+        "claim_status": "cb.claim_status"
+    }
+
     @staticmethod
-    def get_all():
-        # Placeholder as requested by Member M responsibilities
-        pass
+    def get_all(limit=1000, search=None, filters=None, sort_by='claim_date', sort_dir='desc'):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            
+            # Temel sorgu: Claims tablosunu Patients ve Encounters ile birleştiriyoruz
+            query = """
+                SELECT cb.*, 
+                       p.first_name, p.last_name, 
+                       e.visit_date, i.name as insurer_name
+                FROM claims_and_billing cb
+                LEFT JOIN patients p ON cb.patient_id = p.patient_id
+                LEFT JOIN encounters e ON cb.encounter_id = e.encounter_id
+                LEFT JOIN insurers i ON p.insurance_type = i.code
+                WHERE 1=1
+            """
+            params = []
+
+            # 1. Genel Arama (Search Bar)
+            if search:
+                like_term = f"%{search}%"
+                query += """
+                    AND (cb.billing_id LIKE %s OR cb.claim_id LIKE %s OR cb.encounter_id LIKE %s 
+                    OR CONCAT(p.first_name, ' ', p.last_name) LIKE %s OR cb.claim_status LIKE %s)
+                """
+                params.extend([like_term] * 5)
+
+            # 2. Detaylı Filtreler
+            filters = filters or {}
+            if filters.get('billing_id'):
+                query += " AND cb.billing_id LIKE %s"
+                params.append(f"%{filters['billing_id']}%")
+            if filters.get('encounter_id'):
+                query += " AND cb.encounter_id LIKE %s"
+                params.append(f"%{filters['encounter_id']}%")
+            if filters.get('claim_status'):
+                query += " AND cb.claim_status = %s"
+                params.append(filters['claim_status'])
+            if filters.get('billed_amount_min'):
+                query += " AND cb.billed_amount >= %s"
+                params.append(filters['billed_amount_min'])
+            if filters.get('claim_date_from'):
+                query += " AND cb.claim_billing_date >= %s"
+                params.append(filters['claim_date_from'])
+
+            # 3. Sıralama ve Limit
+            sort_col = ClaimsAndBillingModel.SORTABLE_COLUMNS.get(sort_by, 'cb.claim_billing_date')
+            sort_d = 'ASC' if str(sort_dir).lower() == 'asc' else 'DESC'
+            
+            query += f" ORDER BY {sort_col} {sort_d} LIMIT %s"
+            params.append(limit)
+
+            cursor.execute(query, params)
+            return cursor.fetchall()
+        except Error as e:
+            raise Error(f"Error fetching claims: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+    @staticmethod
+    def get_by_id(billing_id):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            query = """
+                SELECT cb.*, p.first_name, p.last_name, e.visit_date 
+                FROM claims_and_billing cb
+                LEFT JOIN patients p ON cb.patient_id = p.patient_id
+                LEFT JOIN encounters e ON cb.encounter_id = e.encounter_id
+                WHERE cb.billing_id = %s
+            """
+            cursor.execute(query, (billing_id,))
+            return cursor.fetchone()
+        except Error as e:
+            raise Error(f"Error fetching claim: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+    @staticmethod
+    def add(data):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            
+            # Otomatik ID oluşturma (BILL-xxx ve CLM-xxx)
+            bill_id = generate_new_id(cursor, 'claims_and_billing', 'billing_id', 'BILL', 6)
+            claim_id = generate_new_id(cursor, 'claims_and_billing', 'claim_id', 'CLM', 6)
+            
+            # Encounter ID'den Patient ID'yi bulalım (Veri tutarlılığı için)
+            encounter_id = data.get('encounter_id')
+            cursor.execute("SELECT patient_id FROM encounters WHERE encounter_id = %s", (encounter_id,))
+            result = cursor.fetchone()
+            if not result:
+                raise Error("Invalid Encounter ID provided.")
+            patient_id = result['patient_id']
+
+            query = """
+                INSERT INTO claims_and_billing 
+                (billing_id, claim_id, patient_id, encounter_id, insurance_provider, payment_method, 
+                 claim_billing_date, billed_amount, paid_amount, claim_status, denial_reason) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                bill_id,
+                claim_id,
+                patient_id,
+                encounter_id,
+                data.get('insurance_provider', 'Unknown'), # Formdan gelmezse default
+                data.get('payment_method'),
+                data.get('claim_billing_date'), # views.py'da claim_date olarak geliyor
+                data.get('billed_amount', 0),
+                data.get('paid_amount', 0),
+                data.get('claim_status', 'Pending'),
+                data.get('denial_reason')
+            )
+            
+            cursor.execute(query, values)
+            conn.commit()
+            return bill_id
+        except Error as e:
+            if conn: conn.rollback()
+            raise Error(f"Error adding claim: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+    @staticmethod
+    def update(billing_id, data):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            
+            fields, values = [], []
+            # Güncellenebilir alanlar
+            updatable_cols = ['encounter_id', 'insurance_provider', 'payment_method', 
+                              'claim_billing_date', 'billed_amount', 'paid_amount', 
+                              'claim_status', 'denial_reason']
+            
+            for key, value in data.items():
+                if key in updatable_cols:
+                    fields.append(f"{key} = %s")
+                    values.append(value)
+            
+            # Eğer encounter değiştiyse patient_id'yi de güncellememiz gerekebilir
+            if 'encounter_id' in data:
+                cursor.execute("SELECT patient_id FROM encounters WHERE encounter_id = %s", (data['encounter_id'],))
+                res = cursor.fetchone()
+                if res:
+                    fields.append("patient_id = %s")
+                    values.append(res['patient_id'])
+
+            if not fields: return False
+            
+            values.append(billing_id)
+            cursor.execute(f"UPDATE claims_and_billing SET {', '.join(fields)} WHERE billing_id = %s", values)
+            conn.commit()
+            return cursor.rowcount > 0
+        except Error as e:
+            if conn: conn.rollback()
+            raise Error(f"Error updating claim: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+    @staticmethod
+    def delete(billing_id):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            
+            # 1. Önce silinmek istenen kaydın 'claim_id' ve 'claim_status' bilgilerini çekelim
+            # Çünkü denials tablosu claim_id ile bağlı, billing_id ile değil.
+            check_query = "SELECT claim_id, claim_status FROM claims_and_billing WHERE billing_id = %s"
+            cursor.execute(check_query, (billing_id,))
+            claim = cursor.fetchone()
+            
+            if claim:
+                # 2. Eğer statüsü 'Denied' ise kontrol etmeliyiz
+                if claim['claim_status'] == 'Denied':
+                    # Bu claim_id'ye ait denial kaydı var mı?
+                    denial_check_query = "SELECT COUNT(*) as cnt FROM denials WHERE claim_id = %s"
+                    cursor.execute(denial_check_query, (claim['claim_id'],))
+                    result = cursor.fetchone()
+                    
+                    # 3. Eğer denials tablosunda kayıt varsa HATA FIRLAT ve silmeyi durdur
+                    if result['cnt'] > 0:
+                        raise Error(f"ENGEL: Statüsü 'Denied' olan ve {result['cnt']} adet itiraz kaydı bulunan fatura silinemez! Önce itiraz kayıtlarını silmelisiniz.")
+
+            # 4. Engel yoksa (veya statü Denied değilse) silme işlemini yap
+            # ON DELETE CASCADE sayesinde bağlı denials kayıtları da (varsa ve statü denied değilse) silinir.
+            cursor.execute("DELETE FROM claims_and_billing WHERE billing_id = %s", (billing_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+            
+        except Error as e:
+            if conn: conn.rollback()
+            # Hatayı yukarı fırlat, views.py bunu yakalayıp ekrana basacak
+            raise Error(str(e))
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+    @staticmethod
+    def sync_claim_amount(encounter_id):
+        """
+        Bu fonksiyon, verilen encounter_id için prosedür ve ilaç maliyetlerini toplar.
+        Eğer claim varsa tutarı günceller, yoksa yeni claim oluşturur.
+        """
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+
+            # 1. Toplam Maliyeti Hesapla (Prosedürler + İlaçlar)
+            # COALESCE(SUM(...), 0) -> Eğer kayıt yoksa None yerine 0 döndürür.
+            calc_query = """
+                SELECT 
+                    (SELECT COALESCE(SUM(procedure_cost), 0) FROM procedures WHERE encounter_id = %s) +
+                    (SELECT COALESCE(SUM(cost), 0) FROM medications WHERE encounter_id = %s) 
+                AS total_amount
+            """
+            cursor.execute(calc_query, (encounter_id, encounter_id))
+            result = cursor.fetchone()
+            total_amount = float(result['total_amount']) if result else 0.0
+
+            # 2. Bu encounter için zaten bir fatura (claim) var mı kontrol et
+            check_query = "SELECT billing_id FROM claims_and_billing WHERE encounter_id = %s"
+            cursor.execute(check_query, (encounter_id,))
+            existing_claim = cursor.fetchone()
+
+            if existing_claim:
+                # DURUM A: Fatura zaten var -> Sadece tutarı güncelle
+                update_query = "UPDATE claims_and_billing SET billed_amount = %s WHERE billing_id = %s"
+                cursor.execute(update_query, (total_amount, existing_claim['billing_id']))
+            else:
+                # DURUM B: Fatura yok -> Yeni fatura oluştur
+                # Gerekli ID'leri üret
+                bill_id = generate_new_id(cursor, 'claims_and_billing', 'billing_id', 'BILL', 6)
+                claim_id = generate_new_id(cursor, 'claims_and_billing', 'claim_id', 'CLM', 6)
+                
+                # Patient ID'yi Encounter tablosundan çek
+                cursor.execute("SELECT patient_id FROM encounters WHERE encounter_id = %s", (encounter_id,))
+                enc_data = cursor.fetchone()
+                patient_id = enc_data['patient_id'] if enc_data else None
+
+                insert_query = """
+                    INSERT INTO claims_and_billing 
+                    (billing_id, claim_id, patient_id, encounter_id, claim_billing_date, 
+                     billed_amount, paid_amount, claim_status, payment_method, insurance_provider)
+                    VALUES (%s, %s, %s, %s, NOW(), %s, 0, 'Pending', 'Insurance', 'Unknown')
+                """
+                cursor.execute(insert_query, (bill_id, claim_id, patient_id, encounter_id, total_amount))
+
+            conn.commit()
+            return True
+
+        except Error as e:
+            if conn: conn.rollback()
+            print(f"Auto-billing error: {e}") # Loglama için
+            return False # Hata olsa bile ana işlemi durdurmayalım, sadece false dönelim
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+class DenialsModel:
+    """Data Access Object for the denials table."""
+
+    @staticmethod
+    def get_all(limit=1000):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            query = """
+                SELECT d.*, cb.billing_id, cb.claim_billing_date 
+                FROM denials d
+                LEFT JOIN claims_and_billing cb ON d.claim_id = cb.claim_id
+                ORDER BY d.denial_date DESC LIMIT %s
+            """
+            cursor.execute(query, (limit,))
+            return cursor.fetchall()
+        except Error as e:
+            raise Error(f"Error fetching denials: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+    @staticmethod
+    def get_by_id(denial_id):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            # İlişkili fatura bilgisini de çekiyoruz
+            query = """
+                SELECT d.*, cb.billing_id, cb.encounter_id, cb.billed_amount
+                FROM denials d
+                LEFT JOIN claims_and_billing cb ON d.claim_id = cb.claim_id
+                WHERE d.denial_id = %s
+            """
+            cursor.execute(query, (denial_id,))
+            return cursor.fetchone()
+        except Error as e:
+            raise Error(f"Error fetching denial: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+    @staticmethod
+    def get_by_claim_id(claim_id):
+        """Bir Claim ID'ye ait Denial kaydını bulur."""
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            cursor.execute("SELECT * FROM denials WHERE claim_id = %s", (claim_id,))
+            return cursor.fetchone()
+        except Error as e:
+            raise Error(f"Error: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()

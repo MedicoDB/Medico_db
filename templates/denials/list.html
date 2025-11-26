@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block title %}Denials Management{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2><i class="bi bi-x-octagon-fill text-danger"></i> Denials Management</h2>
+    <p class="text-muted">Track rejected claims and manage appeals.</p>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Denial ID</th>
+                            <th>Claim ID</th>
+                            <th>Date</th>
+                            <th>Reason Code</th>
+                            <th>Denied Amount</th>
+                            <th>Appeal Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in denials %}
+                        <tr>
+                            <td>{{ d.denial_id }}</td>
+                            <td>
+                                <a href="{{ url_for('claim_view', billing_id=d.billing_id) }}" class="text-decoration-none">
+                                    {{ d.billing_id }}
+                                </a>
+                            </td>
+                            <td>{{ d.denial_date }}</td>
+                            <td><span class="badge bg-secondary">{{ d.denial_reason_code }}</span></td>
+                            <td class="text-danger fw-bold">${{ "%.2f"|format(d.denied_amount) }}</td>
+                            <td>{{ d.appeal_status or 'Not Started' }}</td>
+                            <td>
+                                <a href="{{ url_for('denial_view', denial_id=d.denial_id) }}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No denial records found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
