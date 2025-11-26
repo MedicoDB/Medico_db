@@ -8,10 +8,65 @@ export const api = {
     return response.json();
   },
 
-  // Patients
-  getPatients: async (limit = 500000) => {
-    const response = await fetch(`${API_BASE_URL}/patients/?limit=${limit}`);
+  // Patients - Full CRUD
+  getPatients: async (limit = 1000, params = null) => {
+    // If params is already a URLSearchParams object, use it directly
+    // Otherwise, create a new one (backward compatibility)
+    const queryParams = params instanceof URLSearchParams 
+      ? params 
+      : new URLSearchParams({ limit: limit.toString() });
+    
+    const response = await fetch(`${API_BASE_URL}/patients/?${queryParams}`);
     if (!response.ok) throw new Error('Failed to fetch patients');
+    return response.json();
+  },
+
+  getPatientById: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/patients/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch patient');
+    return response.json();
+  },
+
+  createPatient: async (patientData) => {
+    const response = await fetch(`${API_BASE_URL}/patients/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patientData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create patient');
+    }
+    return response.json();
+  },
+
+  updatePatient: async (id, patientData) => {
+    const response = await fetch(`${API_BASE_URL}/patients/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patientData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update patient');
+    }
+    return response.json();
+  },
+
+  deletePatient: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/patients/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete patient');
+    }
+    return response.json();
+  },
+
+  getPatientEncounters: async (patientId) => {
+    const response = await fetch(`${API_BASE_URL}/patients/${patientId}/encounters`);
+    if (!response.ok) throw new Error('Failed to fetch patient encounters');
     return response.json();
   },
 
