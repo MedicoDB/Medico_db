@@ -3,10 +3,11 @@ Flask routes for the Hospital Management System.
 """
 from flask import render_template, request, redirect, url_for, flash
 from models import (
-    PatientsModel, EncountersModel, InsurersModel, ClaimsAndBillingModel, ProvidersModel
+    PatientsModel, EncountersModel, InsurersModel, ClaimsAndBillingModel, ProvidersModel, MedicationsModel
 )
 from db import get_db_connection, get_db_cursor
 from mysql.connector import Error
+
 
 PATIENT_SORT_OPTIONS = [("registration_date", "Registration Date"), ("patient_id", "ID"), ("first_name", "First Name"), ("last_name", "Last Name"), ("age", "Age"), ("gender", "Gender")]
 PATIENT_GENDER_OPTIONS = ["Male", "Female", "Other"]
@@ -34,33 +35,75 @@ def register_routes(app):
     
     # --- HOME ---
     def home():
+        """Dashboard showing recent hospital activity with complex join query."""
+        
+        # Arama ve Sıralama Parametrelerini Al
+        search_query = request.args.get('q', '').strip()
+        sort_by = request.args.get('sort', 'visit_date')
+        direction = request.args.get('direction', 'desc').lower()
+        
+        # Filtreler
+        filters = {
+            'encounter_id': _value_or_none(request.args.get('encounter_id')),
+            'patient_name': _value_or_none(request.args.get('patient_name')),
+            'provider_name': _value_or_none(request.args.get('provider_name')),
+            'department': _value_or_none(request.args.get('department')),
+            'visit_date': _value_or_none(request.args.get('visit_date')),
+            'status': _value_or_none(request.args.get('status'))
+        }
+        filters_active = _has_filters(filters)
+
         conn = None
         try:
+            # İstatistikler için kısa bir bağlantı (Basit count sorguları)
             conn = get_db_connection()
             cursor = get_db_cursor(conn)
-            query = """
-                SELECT e.encounter_id, e.visit_date, e.visit_type, e.department, e.status as encounter_status,
-                    p.patient_id, p.first_name as patient_first_name, p.last_name as patient_last_name, p.age as patient_age,
-                    pr.provider_id, pr.name as provider_name, pr.specialty as provider_specialty,
-                    d.diagnosis_code, d.diagnosis_description, i.name as insurance_name, cb.billed_amount
+            
+            # Summary Statistics
+            stats_query = """
+                SELECT 
+                    COUNT(DISTINCT e.encounter_id) as total_encounters,
+                    COUNT(DISTINCT p.patient_id) as total_patients,
+                    COUNT(DISTINCT pr.provider_id) as total_providers,
+                    SUM(cb.billed_amount) as total_billed
                 FROM encounters e
-                INNER JOIN patients p ON e.patient_id = p.patient_id
+                LEFT JOIN patients p ON e.patient_id = p.patient_id
                 LEFT JOIN providers pr ON e.provider_id = pr.provider_id
-                LEFT JOIN diagnoses d ON e.encounter_id = d.encounter_id AND d.primary_flag = 1
-                LEFT JOIN insurers i ON p.insurance_type = i.code
                 LEFT JOIN claims_and_billing cb ON e.encounter_id = cb.encounter_id
-                ORDER BY e.visit_date DESC LIMIT 50
             """
-            cursor.execute(query)
-            recent = cursor.fetchall()
-            cursor.execute("SELECT COUNT(DISTINCT encounter_id) as total_encounters, COUNT(DISTINCT patient_id) as total_patients FROM encounters")
+            cursor.execute(stats_query)
             stats = cursor.fetchone()
-            return render_template('home.html', recent_activity=recent, stats=stats)
+            
+            # Recent Activity Listesi (Modelden geliyor)
+            recent_activity = EncountersModel.get_dashboard_activity(
+                limit=50,
+                search=search_query or None,
+                filters=filters,
+                sort_by=sort_by,
+                sort_dir=direction
+            )
+            
+            # Departman listesi (Filtre dropdown'ı için)
+            departments = ProvidersModel.get_departments()
+
+            return render_template('home.html', 
+                                 recent_activity=recent_activity,
+                                 stats=stats,
+                                 search_query=search_query,
+                                 filters=filters,
+                                 filters_active=filters_active,
+                                 current_sort=sort_by,
+                                 current_direction=direction,
+                                 departments=departments,
+                                 status_options=ENCOUNTER_STATUS_OPTIONS)
+                                 
         except Error as e:
-            flash(f'Error: {str(e)}', 'danger')
+            flash(f'Error loading dashboard: {str(e)}', 'danger')
             return render_template('home.html', recent_activity=[], stats={})
         finally:
-            if conn and conn.is_connected(): cursor.close(); conn.close()
+            if conn and conn.is_connected():
+                cursor.close()
+                conn.close()
 
     app.add_url_rule('/', 'home', home, methods=['GET'])
     app.add_url_rule('/home', 'home_alt', home, methods=['GET'])
@@ -276,3 +319,107 @@ def register_routes(app):
         return redirect(url_for('encounters_list'))
 
     app.add_url_rule('/encounters/<encounter_id>/delete', 'encounter_delete', encounter_delete, methods=['POST'])
+
+
+    def medications_list():
+        search = request.args.get('q', '').strip()
+        sort_by = request.args.get('sort', 'prescribed_date')
+        direction = request.args.get('direction', 'desc').lower()
+        
+        filters = {
+            'drug_name': _value_or_none(request.args.get('drug_name')),
+            'encounter_id': _value_or_none(request.args.get('encounter_id')),
+            'date_from': _value_or_none(request.args.get('date_from')),
+            'date_to': _value_or_none(request.args.get('date_to'))
+        }
+        
+        try:
+            medications = MedicationsModel.get_all(
+                limit=1000, 
+                search=search or None, 
+                filters=filters, 
+                sort_by=sort_by, 
+                sort_dir=direction
+            )
+            return render_template('medications/list.html', 
+                                 medications=medications,
+                                 search_query=search,
+                                 filters=filters,
+                                 filters_active=_has_filters(filters),
+                                 current_sort=sort_by,
+                                 current_direction=direction)
+        except Error as e:
+            flash(f'Error: {str(e)}', 'danger')
+            return render_template('medications/list.html', medications=[])
+
+    app.add_url_rule('/medications', 'medications_list', medications_list, methods=['GET'])
+
+    def medication_add():
+        if request.method == 'GET':
+            try:
+                # İlaç eklerken Encounter ve Provider seçmemiz lazım
+                encounters = EncountersModel.get_all(limit=500)
+                providers = ProvidersModel.get_all()
+                return render_template('medications/add.html', encounters=encounters, providers=providers)
+            except Error as e:
+                flash(f'Error: {str(e)}', 'danger')
+                return redirect(url_for('medications_list'))
+        
+        try:
+            data = {
+                'encounter_id': _value_or_none(request.form.get('encounter_id')),
+                'drug_name': request.form.get('drug_name'),
+                'dosage': request.form.get('dosage'),
+                'route': request.form.get('route'),
+                'frequency': request.form.get('frequency'),
+                'duration': request.form.get('duration'),
+                'prescribed_date': request.form.get('prescribed_date'),
+                'prescriber_id': _value_or_none(request.form.get('prescriber_id')),
+                'cost': request.form.get('cost')
+            }
+            MedicationsModel.add(data)
+            flash('Medication added!', 'success')
+            return redirect(url_for('medications_list'))
+        except Error as e:
+            flash(f'Error: {str(e)}', 'danger')
+            return redirect(url_for('medications_list'))
+
+    app.add_url_rule('/medications/add', 'medication_add', medication_add, methods=['GET', 'POST'])
+
+    def medication_edit(med_id):
+        if request.method == 'GET':
+            med = MedicationsModel.get_by_id(med_id)
+            if not med: return redirect(url_for('medications_list'))
+            encounters = EncountersModel.get_all(limit=500)
+            providers = ProvidersModel.get_all()
+            return render_template('medications/edit.html', medication=med, encounters=encounters, providers=providers)
+        
+        try:
+            data = {
+                'encounter_id': _value_or_none(request.form.get('encounter_id')),
+                'drug_name': request.form.get('drug_name'),
+                'dosage': request.form.get('dosage'),
+                'route': request.form.get('route'),
+                'frequency': request.form.get('frequency'),
+                'duration': request.form.get('duration'),
+                'prescribed_date': request.form.get('prescribed_date'),
+                'prescriber_id': _value_or_none(request.form.get('prescriber_id')),
+                'cost': request.form.get('cost')
+            }
+            MedicationsModel.update(med_id, data)
+            flash('Updated!', 'success')
+            return redirect(url_for('medications_list'))
+        except Error as e:
+            flash(str(e), 'danger')
+            return redirect(url_for('medications_list'))
+
+    app.add_url_rule('/medications/<med_id>/edit', 'medication_edit', medication_edit, methods=['GET', 'POST'])
+
+    def medication_delete(med_id):
+        if request.method == 'POST':
+            try:
+                if MedicationsModel.delete(med_id): flash('Deleted!', 'success')
+            except Error as e: flash(str(e), 'danger')
+        return redirect(url_for('medications_list'))
+
+    app.add_url_rule('/medications/<med_id>/delete', 'medication_delete', medication_delete, methods=['POST'])

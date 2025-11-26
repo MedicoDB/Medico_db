@@ -118,29 +118,66 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-striped mb-0 align-middle">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>
-                                <a href="{{ url_for('patients_list', **dict(request.args, sort='patient_id', direction='asc' if current_sort != 'patient_id' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
-                                    ID <i class="bi bi-arrow-down-up small"></i>
-                                </a>
-                            </th>
-                            <th>
-                                <a href="{{ url_for('patients_list', **dict(request.args, sort='first_name', direction='asc' if current_sort != 'first_name' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
-                                    Name <i class="bi bi-arrow-down-up small"></i>
-                                </a>
-                            </th>
-                            <th>Age</th>
-                            <th>Gender</th>
-                            <th>Insurance</th>
-                            <th>
-                                <a href="{{ url_for('patients_list', **dict(request.args, sort='registration_date', direction='asc' if current_sort != 'registration_date' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
-                                    Reg. Date <i class="bi bi-arrow-down-up small"></i>
-                                </a>
-                            </th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
+<thead class="table-dark">
+    <tr>
+        <th>
+            <a href="{{ url_for('patients_list', **dict(request.args, sort='patient_id', direction='asc' if current_sort != 'patient_id' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                ID 
+                {% if current_sort == 'patient_id' %}
+                    <i class="bi bi-arrow-{{ 'up' if current_direction == 'asc' else 'down' }}"></i>
+                {% else %}
+                    <i class="bi bi-arrow-down-up small text-white-50"></i>
+                {% endif %}
+            </a>
+        </th>
+
+        <th>
+            <a href="{{ url_for('patients_list', **dict(request.args, sort='first_name', direction='asc' if current_sort != 'first_name' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                Name 
+                {% if current_sort == 'first_name' %}
+                    <i class="bi bi-arrow-{{ 'up' if current_direction == 'asc' else 'down' }}"></i>
+                {% else %}
+                    <i class="bi bi-arrow-down-up small text-white-50"></i>
+                {% endif %}
+            </a>
+        </th>
+
+        <th>
+            <a href="{{ url_for('patients_list', **dict(request.args, sort='age', direction='asc' if current_sort != 'age' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                Age 
+                {% if current_sort == 'age' %}
+                    <i class="bi bi-arrow-{{ 'up' if current_direction == 'asc' else 'down' }}"></i>
+                {% else %}
+                    <i class="bi bi-arrow-down-up small text-white-50"></i>
+                {% endif %}
+            </a>
+        </th>
+
+        <th>
+            <a href="{{ url_for('patients_list', **dict(request.args, sort='gender', direction='asc' if current_sort != 'gender' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                Gender 
+                {% if current_sort == 'gender' %}
+                    <i class="bi bi-arrow-{{ 'up' if current_direction == 'asc' else 'down' }}"></i>
+                {% else %}
+                    <i class="bi bi-arrow-down-up small text-white-50"></i>
+                {% endif %}
+            </a>
+        </th>
+
+        <th>Insurance</th> <th>
+            <a href="{{ url_for('patients_list', **dict(request.args, sort='registration_date', direction='asc' if current_sort != 'registration_date' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                Reg. Date 
+                {% if current_sort == 'registration_date' %}
+                    <i class="bi bi-arrow-{{ 'up' if current_direction == 'asc' else 'down' }}"></i>
+                {% else %}
+                    <i class="bi bi-arrow-down-up small text-white-50"></i>
+                {% endif %}
+            </a>
+        </th>
+
+        <th class="text-end">Actions</th>
+    </tr>
+</thead>
                     <tbody>
                         {% if patients %}
                             {% for p in patients %}

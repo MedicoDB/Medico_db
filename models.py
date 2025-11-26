@@ -165,7 +165,7 @@ class PatientsModel:
         try:
             conn = get_db_connection()
             cursor = get_db_cursor(conn)
-            patient_id = generate_new_id(cursor, "patients", "patient_id", "PAT-", 6)
+            patient_id = generate_new_id(cursor, "patients", "patient_id", "PAT", 6)
             query = "INSERT INTO patients (patient_id, first_name, last_name, dob, age, gender, ethnicity, insurance_type, marital_status, address, city, state, zip, phone, email, registration_date) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             values = (
                 patient_id,
@@ -266,6 +266,115 @@ class EncountersModel:
         "length_of_stay": "e.length_of_stay",
     }
 
+    @staticmethod
+    def get_dashboard_activity(limit=50, search=None, filters=None, sort_by="visit_date", sort_dir="desc"):
+        """
+        Retrieves recent hospital activity with a Complex Join of 6 tables.
+        Supports filtering and sorting on joined fields (Insurance, Diagnosis, Billing).
+        """
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            
+            # 1. Ana Sorgu (6 Tablolu JOIN)
+            query = """
+                SELECT 
+                    e.encounter_id,
+                    e.visit_date,
+                    e.visit_type,
+                    e.department,
+                    e.status as encounter_status,
+                    p.patient_id,
+                    p.first_name as patient_first_name,
+                    p.last_name as patient_last_name,
+                    pr.provider_id,
+                    pr.name as provider_name,
+                    d.diagnosis_code,
+                    d.diagnosis_description,
+                    i.name as insurance_name,
+                    cb.billed_amount,
+                    cb.claim_status
+                FROM encounters e
+                INNER JOIN patients p ON e.patient_id = p.patient_id
+                LEFT JOIN providers pr ON e.provider_id = pr.provider_id
+                LEFT JOIN diagnoses d ON e.encounter_id = d.encounter_id AND d.primary_flag = 1
+                LEFT JOIN insurers i ON p.insurance_type = i.code
+                LEFT JOIN claims_and_billing cb ON e.encounter_id = cb.encounter_id
+                WHERE 1 = 1
+            """
+            params = []
+
+            # 2. Genel Arama (Search Box)
+            if search:
+                like_term = f"%{search}%"
+                query += """
+                    AND (
+                        e.encounter_id LIKE %s
+                        OR CONCAT(p.first_name, ' ', p.last_name) LIKE %s
+                        OR pr.name LIKE %s
+                        OR d.diagnosis_code LIKE %s
+                        OR i.name LIKE %s
+                        OR e.department LIKE %s
+                    )
+                """
+                params.extend([like_term] * 6)
+
+            # 3. Detaylı Filtreler
+            filters = filters or {}
+            if filters.get('encounter_id'):
+                query += " AND e.encounter_id LIKE %s"
+                params.append(f"%{filters['encounter_id']}%")
+            
+            if filters.get('patient_name'):
+                query += " AND CONCAT(p.first_name, ' ', p.last_name) LIKE %s"
+                params.append(f"%{filters['patient_name']}%")
+                
+            if filters.get('provider_name'):
+                query += " AND pr.name LIKE %s"
+                params.append(f"%{filters['provider_name']}%")
+                
+            if filters.get('department'):
+                query += " AND e.department LIKE %s"
+                params.append(f"%{filters['department']}%")
+                
+            if filters.get('visit_date'):
+                query += " AND e.visit_date = %s"
+                params.append(filters['visit_date'])
+                
+            if filters.get('status'):
+                query += " AND e.status = %s"
+                params.append(filters['status'])
+
+            # 4. Sıralama Haritası (Dashboard Kolonları için)
+            dashboard_sort_map = {
+                "encounter_id": "e.encounter_id",
+                "visit_date": "e.visit_date",
+                "patient_name": "p.first_name", # Soyada göre de sıralanabilir
+                "provider_name": "pr.name",
+                "department": "e.department",
+                "diagnosis": "d.diagnosis_code",
+                "insurance": "i.name",
+                "billed_amount": "cb.billed_amount",
+                "status": "e.status"
+            }
+            
+            sort_column = dashboard_sort_map.get(sort_by, "e.visit_date")
+            sort_direction = "ASC" if str(sort_dir).lower() == "asc" else "DESC"
+            
+            query += f" ORDER BY {sort_column} {sort_direction} LIMIT %s"
+            params.append(limit)
+
+            cursor.execute(query, params)
+            return cursor.fetchall()
+
+        except Error as e:
+            raise Error(f"Error fetching dashboard activity: {e}")
+        finally:
+            if conn and conn.is_connected():
+                cursor.close()
+                conn.close()
+    
     @staticmethod
     def get_all(
         limit=1000, search=None, filters=None, sort_by="visit_date", sort_dir="desc"
@@ -374,7 +483,7 @@ class EncountersModel:
         try:
             conn = get_db_connection()
             cursor = get_db_cursor(conn)
-            eid = generate_new_id(cursor, "encounters", "encounter_id", "ENC-", 3)
+            eid = generate_new_id(cursor, "encounters", "encounter_id", "ENC", 6)
             query = "INSERT INTO encounters (encounter_id, patient_id, provider_id, visit_date, visit_type, department, reason_for_visit, diagnosis_code, admission_type, discharge_date, length_of_stay, status, readmitted_flag) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             values = (
                 eid,
@@ -485,3 +594,173 @@ class ClaimsAndBillingModel:
     def get_all():
         # Placeholder as requested by Member M responsibilities
         pass
+
+
+class MedicationsModel:
+    """Data Access Object for the medications table."""
+    
+    SORTABLE_COLUMNS = {
+        "prescribed_date": "m.prescribed_date",
+        "drug_name": "m.drug_name",
+        "cost": "m.cost",
+        "medication_id": "m.medication_id"
+    }
+    
+    @staticmethod
+    def get_all(limit=1000, search=None, filters=None, sort_by="prescribed_date", sort_dir="desc"):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            # Encounter ve Patient tablolarına join atıyoruz ki hasta ismini de arayabilelim
+            query = """
+                SELECT m.*, 
+                       e.visit_date,
+                       p.first_name as patient_first_name,
+                       p.last_name as patient_last_name,
+                       pr.name as prescriber_name
+                FROM medications m
+                LEFT JOIN encounters e ON m.encounter_id = e.encounter_id
+                LEFT JOIN patients p ON e.patient_id = p.patient_id
+                LEFT JOIN providers pr ON m.prescriber_id = pr.provider_id
+                WHERE 1=1
+            """
+            params = []
+            
+            if search:
+                like_term = f"%{search}%"
+                query += """
+                    AND (
+                        m.medication_id LIKE %s
+                        OR m.drug_name LIKE %s
+                        OR CONCAT(p.first_name, ' ', p.last_name) LIKE %s
+                        OR pr.name LIKE %s
+                    )
+                """
+                params.extend([like_term] * 4)
+            
+            filters = filters or {}
+            if filters.get('drug_name'):
+                query += " AND m.drug_name LIKE %s"
+                params.append(f"%{filters['drug_name']}%")
+            if filters.get('encounter_id'):
+                query += " AND m.encounter_id LIKE %s"
+                params.append(f"%{filters['encounter_id']}%")
+            if filters.get('date_from'):
+                query += " AND m.prescribed_date >= %s"
+                params.append(filters['date_from'])
+            if filters.get('date_to'):
+                query += " AND m.prescribed_date <= %s"
+                params.append(filters['date_to'])
+
+            sort_column = MedicationsModel.SORTABLE_COLUMNS.get(sort_by, "m.prescribed_date")
+            sort_direction = "ASC" if str(sort_dir).lower() == "asc" else "DESC"
+            
+            query += f" ORDER BY {sort_column} {sort_direction} LIMIT %s"
+            params.append(limit)
+            
+            cursor.execute(query, params)
+            return cursor.fetchall()
+        except Error as e:
+            raise Error(f"Error fetching medications: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+    @staticmethod
+    def get_by_id(medication_id):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            query = """
+                SELECT m.*, 
+                       e.visit_date,
+                       p.first_name as patient_first_name,
+                       p.last_name as patient_last_name
+                FROM medications m
+                LEFT JOIN encounters e ON m.encounter_id = e.encounter_id
+                LEFT JOIN patients p ON e.patient_id = p.patient_id
+                WHERE m.medication_id = %s
+            """
+            cursor.execute(query, (medication_id,))
+            return cursor.fetchone()
+        except Error as e:
+            raise Error(f"Error fetching medication: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+    @staticmethod
+    def add(data):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            # ID Format: MED000001
+            med_id = generate_new_id(cursor, 'medications', 'medication_id', 'MED', 6)
+            
+            query = """
+                INSERT INTO medications (
+                    medication_id, encounter_id, drug_name, dosage, route, 
+                    frequency, duration, prescribed_date, prescriber_id, cost
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            values = (
+                med_id,
+                data.get('encounter_id'),
+                data.get('drug_name'),
+                data.get('dosage'),
+                data.get('route'),
+                data.get('frequency'),
+                data.get('duration'),
+                data.get('prescribed_date'),
+                data.get('prescriber_id'),
+                data.get('cost')
+            )
+            cursor.execute(query, values)
+            conn.commit()
+            return med_id
+        except Error as e:
+            if conn: conn.rollback()
+            raise Error(f"Error adding medication: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+    @staticmethod
+    def update(med_id, data):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            fields = []
+            values = []
+            for key, value in data.items():
+                if key != 'medication_id':
+                    fields.append(f"{key} = %s")
+                    values.append(value)
+            if not fields: return False
+            values.append(med_id)
+            
+            query = f"UPDATE medications SET {', '.join(fields)} WHERE medication_id = %s"
+            cursor.execute(query, values)
+            conn.commit()
+            return cursor.rowcount > 0
+        except Error as e:
+            if conn: conn.rollback()
+            raise Error(f"Error updating medication: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
+    @staticmethod
+    def delete(med_id):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            cursor.execute("DELETE FROM medications WHERE medication_id = %s", (med_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except Error as e:
+            if conn: conn.rollback()
+            raise Error(f"Error deleting medication: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
