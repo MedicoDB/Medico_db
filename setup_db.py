@@ -1,7 +1,7 @@
 import mysql.connector
 from mysql.connector import errorcode
 from settings import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
-from table_definitions import CREATE_TABLES_SQL, CREATE_TRIGGERS_SQL
+from table_definitions import CREATE_TABLES_SQL
 import os
 
 def setup_database():
@@ -46,9 +46,6 @@ def setup_database():
             except mysql.connector.Error as err:
                 print(f"Error while creating a table: {err}")
         print("All tables created successfully!")
-        
-        # Triggers are optional - currently using application-level validation
-        # CREATE_TRIGGERS_SQL is empty, so we skip trigger creation
 
         print("\nLoading data from CSV files...")
         

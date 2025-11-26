@@ -163,13 +163,5 @@ CREATE_TABLES_SQL = [
     """
 ]
 
-# Database Constraints - Patient Silme Engelleri:
-# 
-# 1. encounters tablosu: ON DELETE RESTRICT (encounter varsa silinemez)
-# 2. claims_and_billing tablosu: ON DELETE RESTRICT (claim varsa silinemez)
-# 3. denials kontrolü: Application level kontrol (models.py - PatientsModel.delete())
-#
-# Not: CHECK constraint DELETE işlemlerini kontrol edemez (sadece INSERT/UPDATE için çalışır)
-# Bu yüzden denials kontrolü application level'da yapılıyor (models.py)
-#
-CREATE_TRIGGERS_SQL = []  # Trigger kullanmıyoruz, sadece application level kontrol
+# Placeholder for future triggers. Currently we rely on application-level validation.
+CREATE_TRIGGERS_SQL = []

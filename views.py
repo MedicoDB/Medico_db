@@ -1,276 +1,172 @@
 """
 Flask routes for the Hospital Management System.
-Uses app.add_url_rule instead of decorators.
-All routes call methods from models.py for data access.
 """
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash
 from models import (
-    PatientsModel, EncountersModel, InsurersModel, ClaimsAndBillingModel
+    PatientsModel, EncountersModel, InsurersModel, ClaimsAndBillingModel, ProvidersModel
 )
 from db import get_db_connection, get_db_cursor
 from mysql.connector import Error
 
+PATIENT_SORT_OPTIONS = [("registration_date", "Registration Date"), ("patient_id", "ID"), ("first_name", "First Name"), ("last_name", "Last Name"), ("age", "Age"), ("gender", "Gender")]
+PATIENT_GENDER_OPTIONS = ["Male", "Female", "Other"]
+ENCOUNTER_SORT_OPTIONS = [("visit_date", "Visit Date"), ("encounter_id", "ID"), ("patient_id", "Patient ID"), ("provider_id", "Provider ID"), ("department", "Department"), ("visit_type", "Type"), ("status", "Status")]
+ENCOUNTER_STATUS_OPTIONS = ["Scheduled", "Completed", "In Progress", "Cancelled", "Discharged"]
+
+def _safe_int(value):
+    try: return int(value)
+    except: return None
+
+def _value_or_none(value):
+    return value.strip() if value and value.strip() else None
+
+def _bool_from_request(value):
+    if value is None or value == "": return None
+    return value.lower() in ("1", "true", "yes", "y")
+
+def _has_filters(filters_dict):
+    if not filters_dict: return False
+    for val in filters_dict.values():
+        if val not in (None, ''): return True
+    return False
 
 def register_routes(app):
-    """
-    Register all routes with the Flask application using add_url_rule.
     
-    Args:
-        app: Flask application instance
-    """
-    
-    # ========================================================================
-    # HOME / DASHBOARD ROUTE
-    # ========================================================================
-    # Complex Join Query: Encounters + Patients + Providers + Diagnoses + Insurers
-    # This satisfies the "Complex Join (4+ tables)" rubric requirement
-    
+    # --- HOME ---
     def home():
-        """Dashboard showing recent hospital activity with complex join query."""
         conn = None
         try:
             conn = get_db_connection()
             cursor = get_db_cursor(conn)
-            
-            # Complex join query involving 5+ tables
             query = """
-                SELECT 
-                    e.encounter_id,
-                    e.visit_date,
-                    e.visit_type,
-                    e.department,
-                    e.status as encounter_status,
-                    p.patient_id,
-                    p.first_name as patient_first_name,
-                    p.last_name as patient_last_name,
-                    p.age as patient_age,
-                    pr.provider_id,
-                    pr.name as provider_name,
-                    pr.specialty as provider_specialty,
-                    d.diagnosis_code,
-                    d.diagnosis_description,
-                    d.primary_flag,
-                    i.code as insurance_code,
-                    i.name as insurance_name,
-                    cb.billed_amount,
-                    cb.claim_status
+                SELECT e.encounter_id, e.visit_date, e.visit_type, e.department, e.status as encounter_status,
+                    p.patient_id, p.first_name as patient_first_name, p.last_name as patient_last_name, p.age as patient_age,
+                    pr.provider_id, pr.name as provider_name, pr.specialty as provider_specialty,
+                    d.diagnosis_code, d.diagnosis_description, i.name as insurance_name, cb.billed_amount
                 FROM encounters e
                 INNER JOIN patients p ON e.patient_id = p.patient_id
                 LEFT JOIN providers pr ON e.provider_id = pr.provider_id
                 LEFT JOIN diagnoses d ON e.encounter_id = d.encounter_id AND d.primary_flag = 1
                 LEFT JOIN insurers i ON p.insurance_type = i.code
                 LEFT JOIN claims_and_billing cb ON e.encounter_id = cb.encounter_id
-                ORDER BY e.visit_date DESC
-                LIMIT 50
+                ORDER BY e.visit_date DESC LIMIT 50
             """
             cursor.execute(query)
-            recent_activity = cursor.fetchall()
-            
-            # Get summary statistics
-            stats_query = """
-                SELECT 
-                    COUNT(DISTINCT e.encounter_id) as total_encounters,
-                    COUNT(DISTINCT p.patient_id) as total_patients,
-                    COUNT(DISTINCT pr.provider_id) as total_providers,
-                    SUM(cb.billed_amount) as total_billed
-                FROM encounters e
-                LEFT JOIN patients p ON e.patient_id = p.patient_id
-                LEFT JOIN providers pr ON e.provider_id = pr.provider_id
-                LEFT JOIN claims_and_billing cb ON e.encounter_id = cb.encounter_id
-            """
-            cursor.execute(stats_query)
+            recent = cursor.fetchall()
+            cursor.execute("SELECT COUNT(DISTINCT encounter_id) as total_encounters, COUNT(DISTINCT patient_id) as total_patients FROM encounters")
             stats = cursor.fetchone()
-            
-            return render_template('home.html', 
-                                 recent_activity=recent_activity,
-                                 stats=stats)
+            return render_template('home.html', recent_activity=recent, stats=stats)
         except Error as e:
-            flash(f'Error loading dashboard: {str(e)}', 'danger')
+            flash(f'Error: {str(e)}', 'danger')
             return render_template('home.html', recent_activity=[], stats={})
         finally:
-            if conn and conn.is_connected():
-                cursor.close()
-                conn.close()
-    
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
     app.add_url_rule('/', 'home', home, methods=['GET'])
     app.add_url_rule('/home', 'home_alt', home, methods=['GET'])
-    
-    # ========================================================================
-    # PATIENT CRUD ROUTES (Member A)
-    # ========================================================================
-    
+
+    # --- PATIENTS (Member A) ---
     def patients_list():
-        """List all patients."""
+        search = request.args.get('q', '').strip()
+        sort_by = request.args.get('sort', 'registration_date')
+        direction = request.args.get('direction', 'desc').lower()
+        filters = {
+            'patient_id': _value_or_none(request.args.get('patient_id')),
+            'first_name': _value_or_none(request.args.get('first_name')),
+            'last_name': _value_or_none(request.args.get('last_name')),
+            'gender': _value_or_none(request.args.get('gender')),
+            'insurance_type': _value_or_none(request.args.get('insurance_type')),
+            'age_exact': _safe_int(request.args.get('age')),
+            'registration_from': _value_or_none(request.args.get('registration_from')),
+            'city': _value_or_none(request.args.get('city'))
+        }
         try:
-            patients = PatientsModel.get_all()
-            return render_template('patients/list.html', patients=patients)
+            patients = PatientsModel.get_all(limit=1000, search=search or None, filters=filters, sort_by=sort_by, sort_dir=direction)
+            insurers = InsurersModel.get_all()
+            return render_template('patients/list.html', patients=patients, search_query=search, filters=filters, filters_active=_has_filters(filters), sort_options=PATIENT_SORT_OPTIONS, current_sort=sort_by, current_direction=direction, gender_options=PATIENT_GENDER_OPTIONS, insurer_options=insurers)
         except Error as e:
-            flash(f'Error loading patients: {str(e)}', 'danger')
-            return render_template('patients/list.html', patients=[])
-    
+            flash(f'Error: {str(e)}', 'danger')
+            return redirect(url_for('home'))
+
     app.add_url_rule('/patients', 'patients_list', patients_list, methods=['GET'])
-    
+
     def patient_view(patient_id):
-        """View a single patient's details."""
-        conn = None
         try:
             patient = PatientsModel.get_by_id(patient_id)
-            if not patient:
-                flash('Patient not found', 'danger')
-                return redirect(url_for('patients_list'))
-            
-            # Get patient's encounters
+            if not patient: return redirect(url_for('patients_list'))
             conn = get_db_connection()
             cursor = get_db_cursor(conn)
-            encounters_query = """
-                SELECT e.*, pr.name as provider_name
-                FROM encounters e
-                LEFT JOIN providers pr ON e.provider_id = pr.provider_id
-                WHERE e.patient_id = %s
-                ORDER BY e.visit_date DESC
-            """
-            cursor.execute(encounters_query, (patient_id,))
+            cursor.execute("SELECT e.*, pr.name as provider_name FROM encounters e LEFT JOIN providers pr ON e.provider_id = pr.provider_id WHERE e.patient_id = %s ORDER BY e.visit_date DESC", (patient_id,))
             encounters = cursor.fetchall()
-            
-            return render_template('patients/view.html', 
-                                 patient=patient, 
-                                 encounters=encounters)
-        except Error as e:
-            flash(f'Error loading patient: {str(e)}', 'danger')
-            return redirect(url_for('patients_list'))
-        finally:
-            if conn and conn.is_connected():
-                cursor.close()
-                conn.close()
-    
+            conn.close()
+            return render_template('patients/view.html', patient=patient, encounters=encounters)
+        except Error: return redirect(url_for('patients_list'))
+
     app.add_url_rule('/patients/<patient_id>', 'patient_view', patient_view, methods=['GET'])
-    
+
     def patient_add():
-        """Add a new patient (GET: show form, POST: process form)."""
         if request.method == 'GET':
-            try:
-                insurers = InsurersModel.get_all()
-                return render_template('patients/add.html', insurers=insurers)
-            except Error as e:
-                flash(f'Error loading form: {str(e)}', 'danger')
-                return redirect(url_for('patients_list'))
-        
-        # POST: Process form submission
+            return render_template('patients/add.html', insurers=InsurersModel.get_all())
         try:
-            patient_data = {
-                'first_name': request.form.get('first_name'),
-                'last_name': request.form.get('last_name'),
-                'dob': request.form.get('dob'),
-                'age': int(request.form.get('age', 0)),
-                'gender': request.form.get('gender'),
-                'ethnicity': request.form.get('ethnicity'),
-                'insurance_type': request.form.get('insurance_type') or None,
-                'marital_status': request.form.get('marital_status', 'unknown'),
-                'address': request.form.get('address') or None,
-                'city': request.form.get('city') or None,
-                'state': request.form.get('state') or None,
-                'zip': request.form.get('zip') or None,
-                'phone': request.form.get('phone') or None,
-                'email': request.form.get('email') or None,
-                'registration_date': request.form.get('registration_date')
-            }
-            
-            patient_id = PatientsModel.add(patient_data)
-            flash(f'Patient {patient_id} added successfully!', 'success')
-            return redirect(url_for('patient_view', patient_id=patient_id))
+            pid = PatientsModel.add(request.form)
+            flash(f'Patient {pid} added!', 'success')
+            return redirect(url_for('patient_view', patient_id=pid))
         except Error as e:
-            flash(f'Error adding patient: {str(e)}', 'danger')
-            try:
-                insurers = InsurersModel.get_all()
-                return render_template('patients/add.html', insurers=insurers)
-            except:
-                return redirect(url_for('patients_list'))
-    
+            flash(str(e), 'danger')
+            return redirect(url_for('patients_list'))
+
     app.add_url_rule('/patients/add', 'patient_add', patient_add, methods=['GET', 'POST'])
-    
-    def patient_edit(patient_id):
-        """Edit an existing patient (GET: show form, POST: process form)."""
-        if request.method == 'GET':
-            try:
-                patient = PatientsModel.get_by_id(patient_id)
-                if not patient:
-                    flash('Patient not found', 'danger')
-                    return redirect(url_for('patients_list'))
-                
-                insurers = InsurersModel.get_all()
-                return render_template('patients/edit.html', 
-                                     patient=patient, 
-                                     insurers=insurers)
-            except Error as e:
-                flash(f'Error loading patient: {str(e)}', 'danger')
-                return redirect(url_for('patients_list'))
-        
-        # POST: Process form submission
-        try:
-            patient_data = {
-                'first_name': request.form.get('first_name'),
-                'last_name': request.form.get('last_name'),
-                'dob': request.form.get('dob'),
-                'age': int(request.form.get('age', 0)),
-                'gender': request.form.get('gender'),
-                'ethnicity': request.form.get('ethnicity'),
-                'insurance_type': request.form.get('insurance_type') or None,
-                'marital_status': request.form.get('marital_status', 'unknown'),
-                'address': request.form.get('address') or None,
-                'city': request.form.get('city') or None,
-                'state': request.form.get('state') or None,
-                'zip': request.form.get('zip') or None,
-                'phone': request.form.get('phone') or None,
-                'email': request.form.get('email') or None,
-                'registration_date': request.form.get('registration_date')
-            }
-            
-            success = PatientsModel.update(patient_id, patient_data)
-            if success:
-                flash(f'Patient {patient_id} updated successfully!', 'success')
-                return redirect(url_for('patient_view', patient_id=patient_id))
-            else:
-                flash('No changes were made', 'warning')
-                return redirect(url_for('patient_edit', patient_id=patient_id))
-        except Error as e:
-            flash(f'Error updating patient: {str(e)}', 'danger')
-            return redirect(url_for('patient_edit', patient_id=patient_id))
-    
-    app.add_url_rule('/patients/<patient_id>/edit', 'patient_edit', patient_edit, methods=['GET', 'POST'])
-    
+
     def patient_delete(patient_id):
-        """Delete a patient."""
         if request.method == 'POST':
             try:
-                success = PatientsModel.delete(patient_id)
-                if success:
-                    flash(f'Patient {patient_id} deleted successfully!', 'success')
-                else:
-                    flash('Patient not found or could not be deleted', 'warning')
-            except Error as e:
-                flash(f'Error deleting patient: {str(e)}', 'danger')
-        
+                if PatientsModel.delete(patient_id): flash('Deleted!', 'success')
+            except Error as e: flash(str(e), 'danger')
         return redirect(url_for('patients_list'))
-    
+
     app.add_url_rule('/patients/<patient_id>/delete', 'patient_delete', patient_delete, methods=['POST'])
-    
-    # ========================================================================
-    # ENCOUNTER CRUD ROUTES (Member A)
-    # ========================================================================
-    
-    def encounters_list():
-        """List all encounters."""
+
+    def patient_edit(patient_id):
+        if request.method == 'GET':
+            p = PatientsModel.get_by_id(patient_id)
+            if not p: return redirect(url_for('patients_list'))
+            return render_template('patients/edit.html', patient=p, insurers=InsurersModel.get_all())
         try:
-            encounters = EncountersModel.get_all()
-            return render_template('encounters/list.html', encounters=encounters)
+            PatientsModel.update(patient_id, request.form)
+            flash('Updated!', 'success')
+            return redirect(url_for('patient_view', patient_id=patient_id))
         except Error as e:
-            flash(f'Error loading encounters: {str(e)}', 'danger')
-            return render_template('encounters/list.html', encounters=[])
-    
+            flash(str(e), 'danger')
+            return redirect(url_for('patients_list'))
+
+    app.add_url_rule('/patients/<patient_id>/edit', 'patient_edit', patient_edit, methods=['GET', 'POST'])
+
+    # --- ENCOUNTERS (Member A) ---
+    def encounters_list():
+        search = request.args.get('q', '').strip()
+        sort_by = request.args.get('sort', 'visit_date')
+        direction = request.args.get('direction', 'desc').lower()
+        filters = {
+            'encounter_id': _value_or_none(request.args.get('encounter_id')),
+            'patient_id': _value_or_none(request.args.get('patient_id')),
+            'provider_id': _value_or_none(request.args.get('provider_id')),
+            'patient_name': _value_or_none(request.args.get('patient_name')),
+            'provider_name': _value_or_none(request.args.get('provider_name')),
+            'department': _value_or_none(request.args.get('department')),
+            'status': _value_or_none(request.args.get('status')),
+            'visit_from': _value_or_none(request.args.get('visit_from')),
+            'readmitted_flag': _bool_from_request(request.args.get('readmitted_flag'))
+        }
+        try:
+            encounters = EncountersModel.get_all(limit=1000, search=search or None, filters=filters, sort_by=sort_by, sort_dir=direction)
+            return render_template('encounters/list.html', encounters=encounters, search_query=search, filters=filters, filters_active=_has_filters(filters), sort_options=ENCOUNTER_SORT_OPTIONS, status_options=ENCOUNTER_STATUS_OPTIONS, current_sort=sort_by, current_direction=direction)
+        except Error as e:
+            flash(f'Error: {str(e)}', 'danger')
+            return render_template('encounters/list.html', encounters=[], search_query='', filters={}, filters_active=False, sort_options=[], status_options=[])
+
     app.add_url_rule('/encounters', 'encounters_list', encounters_list, methods=['GET'])
-    
+
     def encounter_view(encounter_id):
-        """View a single encounter's details."""
         conn = None
         try:
             encounter = EncountersModel.get_by_id(encounter_id)
@@ -278,60 +174,105 @@ def register_routes(app):
                 flash('Encounter not found', 'danger')
                 return redirect(url_for('encounters_list'))
             
-            # Get encounter's diagnoses
             conn = get_db_connection()
             cursor = get_db_cursor(conn)
-            diagnoses_query = """
-                SELECT * FROM diagnoses
-                WHERE encounter_id = %s
-                ORDER BY primary_flag DESC
-            """
-            cursor.execute(diagnoses_query, (encounter_id,))
+            
+            cursor.execute("SELECT * FROM diagnoses WHERE encounter_id = %s ORDER BY primary_flag DESC", (encounter_id,))
             diagnoses = cursor.fetchall()
             
-            # Get encounter's procedures
-            procedures_query = """
-                SELECT pr.*, p.name as provider_name
-                FROM procedures pr
-                LEFT JOIN providers p ON pr.provider_id = p.provider_id
-                WHERE pr.encounter_id = %s
-                ORDER BY pr.procedure_date DESC
-            """
-            cursor.execute(procedures_query, (encounter_id,))
+            cursor.execute("SELECT pr.*, p.name as provider_name FROM procedures pr LEFT JOIN providers p ON pr.provider_id = p.provider_id WHERE pr.encounter_id = %s ORDER BY pr.procedure_date DESC", (encounter_id,))
             procedures = cursor.fetchall()
             
-            # Get encounter's medications
-            medications_query = """
-                SELECT m.*, p.name as prescriber_name
-                FROM medications m
-                LEFT JOIN providers p ON m.prescriber_id = p.provider_id
-                WHERE m.encounter_id = %s
-                ORDER BY m.prescribed_date DESC
-            """
-            cursor.execute(medications_query, (encounter_id,))
+            cursor.execute("SELECT m.*, p.name as prescriber_name FROM medications m LEFT JOIN providers p ON m.prescriber_id = p.provider_id WHERE m.encounter_id = %s ORDER BY m.prescribed_date DESC", (encounter_id,))
             medications = cursor.fetchall()
             
-            # Get billing info
-            billing_query = """
-                SELECT * FROM claims_and_billing
-                WHERE encounter_id = %s
-            """
-            cursor.execute(billing_query, (encounter_id,))
+            cursor.execute("SELECT * FROM claims_and_billing WHERE encounter_id = %s", (encounter_id,))
             billing = cursor.fetchone()
             
-            return render_template('encounters/view.html', 
-                                 encounter=encounter,
-                                 diagnoses=diagnoses,
-                                 procedures=procedures,
-                                 medications=medications,
-                                 billing=billing)
+            return render_template('encounters/view.html', encounter=encounter, diagnoses=diagnoses, procedures=procedures, medications=medications, billing=billing)
         except Error as e:
-            flash(f'Error loading encounter: {str(e)}', 'danger')
+            flash(f'Error: {str(e)}', 'danger')
             return redirect(url_for('encounters_list'))
         finally:
-            if conn and conn.is_connected():
-                cursor.close()
-                conn.close()
-    
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+
     app.add_url_rule('/encounters/<encounter_id>', 'encounter_view', encounter_view, methods=['GET'])
 
+    def encounter_add():
+        if request.method == 'GET':
+            try:
+                # Hastaları ve Doktorları çekiyoruz
+                patients = PatientsModel.get_all(limit=3000) # Limiti biraz artırdık
+                providers = ProvidersModel.get_all()
+                # Departman listesini çekiyoruz
+                departments = ProvidersModel.get_departments()
+                
+                return render_template('encounters/add.html', 
+                                     patients=patients, 
+                                     providers=providers,
+                                     departments=departments, # Template'e gönderdik
+                                     status_options=ENCOUNTER_STATUS_OPTIONS)
+            except Error as e:
+                flash(f'Error loading form: {str(e)}', 'danger')
+                return redirect(url_for('encounters_list'))
+        try:
+            data = {
+                'patient_id': _value_or_none(request.form.get('patient_id')),
+                'provider_id': _value_or_none(request.form.get('provider_id')),
+                'visit_date': request.form.get('visit_date'),
+                'visit_type': request.form.get('visit_type'),
+                'department': request.form.get('department'),
+                'reason_for_visit': request.form.get('reason_for_visit'),
+                'diagnosis_code': request.form.get('diagnosis_code'),
+                'admission_type': request.form.get('admission_type'),
+                'discharge_date': _value_or_none(request.form.get('discharge_date')),
+                'length_of_stay': _safe_int(request.form.get('length_of_stay')),
+                'status': request.form.get('status'),
+                'readmitted_flag': True if request.form.get('readmitted_flag') else False
+            }
+            eid = EncountersModel.add(data)
+            flash(f'Encounter {eid} created!', 'success')
+            return redirect(url_for('encounter_view', encounter_id=eid))
+        except Error as e:
+            flash(f'Error: {str(e)}', 'danger')
+            return redirect(url_for('encounters_list'))
+
+    app.add_url_rule('/encounters/add', 'encounter_add', encounter_add, methods=['GET', 'POST'])
+
+    def encounter_edit(encounter_id):
+        if request.method == 'GET':
+            enc = EncountersModel.get_by_id(encounter_id)
+            if not enc: return redirect(url_for('encounters_list'))
+            return render_template('encounters/edit.html', encounter=enc, patients=PatientsModel.get_all(limit=500), providers=ProvidersModel.get_all(), status_options=ENCOUNTER_STATUS_OPTIONS)
+        try:
+            data = {
+                'patient_id': _value_or_none(request.form.get('patient_id')),
+                'provider_id': _value_or_none(request.form.get('provider_id')),
+                'visit_date': request.form.get('visit_date'),
+                'visit_type': request.form.get('visit_type'),
+                'department': request.form.get('department'),
+                'reason_for_visit': request.form.get('reason_for_visit'),
+                'diagnosis_code': request.form.get('diagnosis_code'),
+                'admission_type': request.form.get('admission_type'),
+                'discharge_date': _value_or_none(request.form.get('discharge_date')),
+                'length_of_stay': _safe_int(request.form.get('length_of_stay')),
+                'status': request.form.get('status'),
+                'readmitted_flag': True if request.form.get('readmitted_flag') else False
+            }
+            EncountersModel.update(encounter_id, data)
+            flash('Updated!', 'success')
+            return redirect(url_for('encounter_view', encounter_id=encounter_id))
+        except Error as e:
+            flash(str(e), 'danger')
+            return redirect(url_for('encounters_list'))
+
+    app.add_url_rule('/encounters/<encounter_id>/edit', 'encounter_edit', encounter_edit, methods=['GET', 'POST'])
+
+    def encounter_delete(encounter_id):
+        if request.method == 'POST':
+            try:
+                if EncountersModel.delete(encounter_id): flash('Deleted!', 'success')
+            except Error as e: flash(str(e), 'danger')
+        return redirect(url_for('encounters_list'))
+
+    app.add_url_rule('/encounters/<encounter_id>/delete', 'encounter_delete', encounter_delete, methods=['POST'])

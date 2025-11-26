@@ -5,7 +5,7 @@ Contains ID generation logic for string-based primary keys.
 from mysql.connector import Error
 
 
-def generate_new_id(cursor, table_name, column_name, prefix, padding=3):
+def generate_new_id(cursor, table_name, column_name, prefix, padding=6):
     """
     Generate a new ID for a table with string-based primary keys.
     

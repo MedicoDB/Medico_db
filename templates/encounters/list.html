@@ -1,74 +1,135 @@
 {% extends "layout.html" %}
 
-{% block title %}Encounters - Hospital Management System{% endblock %}
+{% block title %}Encounters List{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1><i class="bi bi-clipboard-pulse"></i> Encounters</h1>
-        <a href="{{ url_for('patients_list') }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Patients
+        <div>
+            <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-calendar-check-fill"></i> Encounter Management</h1>
+            <p class="text-muted small mb-0">Track patient visits, admissions, and medical history.</p>
+        </div>
+        <a href="{{ url_for('encounter_add') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Encounter
         </a>
     </div>
 
-    {% if encounters %}
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> Showing first <strong>{{ encounters|length }}</strong> encounters (limited to 1000 for performance).
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light py-3" data-bs-toggle="collapse" data-bs-target="#filterCollapse" style="cursor: pointer;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-funnel"></i> Advanced Search & Filter
+                </h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+        </div>
+        <div class="collapse {% if filters_active or search_query %}show{% endif %}" id="filterCollapse">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('encounters_list') }}">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold small text-muted">General Search</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" name="q" placeholder="Search by ID, Name, Provider..." value="{{ search_query or '' }}">
+                            </div>
+                        </div>
+                        <div class="col-12"><hr class="my-2"></div>
+                        
+                        <div class="col-md-2"><label class="form-label small">Encounter ID</label><input type="text" class="form-control form-control-sm" name="encounter_id" value="{{ filters.encounter_id or '' }}"></div>
+                        <div class="col-md-2"><label class="form-label small">Patient ID</label><input type="text" class="form-control form-control-sm" name="patient_id" value="{{ filters.patient_id or '' }}"></div>
+                        <div class="col-md-2"><label class="form-label small">Provider ID</label><input type="text" class="form-control form-control-sm" name="provider_id" value="{{ filters.provider_id or '' }}"></div>
+                        
+                        <div class="col-md-3"><label class="form-label small">Patient Name</label><input type="text" class="form-control form-control-sm" name="patient_name" value="{{ filters.patient_name or '' }}" placeholder="Name or Surname"></div>
+                        <div class="col-md-3"><label class="form-label small">Provider Name</label><input type="text" class="form-control form-control-sm" name="provider_name" value="{{ filters.provider_name or '' }}" placeholder="Dr. Name"></div>
+
+                        <div class="col-md-3"><label class="form-label small">Status</label>
+                            <select class="form-select form-select-sm" name="status">
+                                <option value="">All Statuses</option>
+                                {% for status in status_options %}<option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3"><label class="form-label small">Date From</label><input type="date" class="form-control form-control-sm" name="visit_from" value="{{ filters.visit_from or '' }}"></div>
+
+                        <input type="hidden" name="sort" value="{{ current_sort }}">
+                        <input type="hidden" name="direction" value="{{ current_direction }}">
+
+                        <div class="col-12 text-end mt-3">
+                            <a href="{{ url_for('encounters_list') }}" class="btn btn-outline-secondary btn-sm me-2">Reset</a>
+                            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-    <div class="card">
-        <div class="card-body">
+
+    <div class="card shadow mb-4">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
+                <table class="table table-hover table-striped mb-0 align-middle">
                     <thead class="table-dark">
                         <tr>
-                            <th>Encounter ID</th>
-                            <th>Visit Date</th>
+                            <th><a href="{{ url_for('encounters_list', **dict(request.args, sort='encounter_id', direction='asc' if current_sort != 'encounter_id' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">ID</a></th>
+                            <th><a href="{{ url_for('encounters_list', **dict(request.args, sort='visit_date', direction='asc' if current_sort != 'visit_date' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">Date</a></th>
                             <th>Patient</th>
                             <th>Provider</th>
-                            <th>Department</th>
-                            <th>Visit Type</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for encounter in encounters %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('encounter_view', encounter_id=encounter.encounter_id) }}" class="text-decoration-none">
-                                    <strong>{{ encounter.encounter_id }}</strong>
-                                </a>
-                            </td>
-                            <td>{{ encounter.visit_date.strftime('%Y-%m-%d') if encounter.visit_date else 'N/A' }}</td>
-                            <td>
-                                {{ encounter.patient_first_name }} {{ encounter.patient_last_name }}
-                                <br><small class="text-muted">{{ encounter.patient_id }}</small>
-                            </td>
-                            <td>{{ encounter.provider_name or 'N/A' }}</td>
-                            <td>{{ encounter.department or 'N/A' }}</td>
-                            <td>{{ encounter.visit_type or 'N/A' }}</td>
-                            <td>
-                                <span class="badge bg-{{ 'success' if encounter.status == 'Completed' else 'warning' }}">
-                                    {{ encounter.status or 'N/A' }}
-                                </span>
-                            </td>
-                            <td>
-                                <a href="{{ url_for('encounter_view', encounter_id=encounter.encounter_id) }}" class="btn btn-sm btn-info">
-                                    <i class="bi bi-eye"></i> View
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
+                        {% if encounters %}
+                            {% for encounter in encounters %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ encounter.encounter_id }}</span></td>
+                                <td>{{ encounter.visit_date.strftime('%Y-%m-%d') if encounter.visit_date else '-' }}</td>
+                                <td>
+                                    <div class="fw-bold">{{ encounter.patient_first_name }} {{ encounter.patient_last_name }}</div>
+                                    <small class="text-muted">{{ encounter.patient_id }}</small>
+                                </td>
+                                <td>{{ encounter.provider_name or 'N/A' }}</td>
+                                <td><span class="badge bg-{{ 'success' if encounter.status == 'Completed' else 'warning' }}">{{ encounter.status }}</span></td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('encounter_view', encounter_id=encounter.encounter_id) }}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                                    <a href="{{ url_for('encounter_edit', encounter_id=encounter.encounter_id) }}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ loop.index }}"><i class="bi bi-trash"></i></button>
+                                    
+                                    <div class="modal fade text-start" id="deleteModal{{ loop.index }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-danger text-white"><h5 class="modal-title">Delete Encounter?</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                                <div class="modal-body">Are you sure you want to delete encounter <strong>{{ encounter.encounter_id }}</strong>?<br><small class="text-muted">This cannot be undone.</small></div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form action="{{ url_for('encounter_delete', encounter_id=encounter.encounter_id) }}" method="POST">
+                                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="6" class="text-center py-5">No encounters found.</td></tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-    {% else %}
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> No encounters found.
-    </div>
-    {% endif %}
 </div>
 {% endblock %}
-
