@@ -1,8 +1,7 @@
 # app/api/claims.py
 
 from flask import Blueprint, jsonify
-from app.db import get_db_connection 
-
+from ..db import get_conn
 # 'claims_api' adında yeni bir blueprint oluşturuyoruz
 claims_bp = Blueprint('claims_api', __name__, url_prefix='/api/claims')
 
@@ -10,7 +9,7 @@ claims_bp = Blueprint('claims_api', __name__, url_prefix='/api/claims')
 @claims_bp.route('/', methods=['GET'])
 def get_all_claims():
     try:
-        conn = get_db_connection()
+        conn = get_conn()
         cur = conn.cursor(dictionary=True)
 
         # Sorumlu olduğun 'claims_and_billing' tablosu
@@ -28,9 +27,9 @@ def get_all_claims():
 
 # getting informations by patients ids'
 @claims_bp.route('/patient/<int:patient_id>', methods=['GET'])
-def get_claims_by_patient(patient_id):
+def get_claims_by_patient(patiesnt_id):
     try:
-        conn = get_db_connection()
+        conn = get_conn()
         cur = conn.cursor(dictionary=True)
         
         # claims_and_billing tablosunda patient_id sütunu var
@@ -52,7 +51,7 @@ def get_claims_by_patient(patient_id):
 @claims_bp.route('/<int:id>', methods=['GET'])
 def get_claim_by_id(id):
     try:
-        conn = get_db_connection()
+        conn = get_conn()
         cur = conn.cursor(dictionary=True)
         
         # Tablonun Primary Key'i: billing_id

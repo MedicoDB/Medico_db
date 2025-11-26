@@ -422,4 +422,4 @@ def register_routes(app):
             except Error as e: flash(str(e), 'danger')
         return redirect(url_for('medications_list'))
 
-    app.add_url_rule('/medications/<med_id>/delete', 'medication_delete', medication_delete, methods=['POST'])
+    app.add_url_rule('/medications/<med_id>/delete', 'medication_delete', medication_delete, methods=['POST'])18

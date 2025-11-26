@@ -1,0 +1,178 @@
+{% extends "layout.html" %}
+{% block title %}Claims & Billing{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-wallet2"></i> Claims & Billing</h1>
+            <p class="text-muted small mb-0">Manage insurance claims, billing statuses, and payments.</p>
+        </div>
+        <a href="{{ url_for('claim_add') }}" class="btn btn-success">
+            <i class="bi bi-plus-lg"></i> New Claim
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light py-3" data-bs-toggle="collapse" data-bs-target="#filterCollapse" style="cursor: pointer;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-funnel"></i> Search & Filter
+                </h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+        </div>
+        <div class="collapse {% if filters_active or search_query %}show{% endif %}" id="filterCollapse">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('claims_list') }}">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" name="q" placeholder="Search by Bill ID, Claim ID, Encounter ID..." value="{{ search_query or '' }}">
+                            </div>
+                        </div>
+                        <div class="col-12"><hr class="my-2"></div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label small">Claim Status</label>
+                            <select class="form-select form-select-sm" name="claim_status">
+                                <option value="">All Statuses</option>
+                                {% for status in status_options %}
+                                <option value="{{ status }}" {% if filters.claim_status == status %}selected{% endif %}>{{ status }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Min Amount ($)</label>
+                            <input type="number" class="form-control form-control-sm" name="billed_amount_min" value="{{ filters.billed_amount_min or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Date From</label>
+                            <input type="date" class="form-control form-control-sm" name="claim_date_from" value="{{ filters.claim_date_from or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Billing ID</label>
+                            <input type="text" class="form-control form-control-sm" name="billing_id" value="{{ filters.billing_id or '' }}">
+                        </div>
+
+                        <input type="hidden" name="sort" value="{{ current_sort }}">
+                        <input type="hidden" name="direction" value="{{ current_direction }}">
+
+                        <div class="col-12 text-end mt-3">
+                            <a href="{{ url_for('claims_list') }}" class="btn btn-outline-secondary btn-sm me-2">Reset</a>
+                            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>
+                                <a href="{{ url_for('claims_list', **dict(request.args, sort='billing_id', direction='asc' if current_sort != 'billing_id' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                                    ID {% if current_sort == 'billing_id' %}<i class="bi bi-arrow-{{ 'up' if current_direction == 'asc' else 'down' }}"></i>{% endif %}
+                                </a>
+                            </th>
+                            <th>
+                                <a href="{{ url_for('claims_list', **dict(request.args, sort='claim_date', direction='asc' if current_sort != 'claim_date' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                                    Date {% if current_sort == 'claim_date' %}<i class="bi bi-arrow-{{ 'up' if current_direction == 'asc' else 'down' }}"></i>{% endif %}
+                                </a>
+                            </th>
+                            <th>Encounter</th>
+                            <th>Patient</th>
+                            <th>
+                                <a href="{{ url_for('claims_list', **dict(request.args, sort='billed_amount', direction='asc' if current_sort != 'billed_amount' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                                    Amount {% if current_sort == 'billed_amount' %}<i class="bi bi-arrow-{{ 'up' if current_direction == 'asc' else 'down' }}"></i>{% endif %}
+                                </a>
+                            </th>
+                            <th>
+                                <a href="{{ url_for('claims_list', **dict(request.args, sort='claim_status', direction='asc' if current_sort != 'claim_status' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                                    Status {% if current_sort == 'claim_status' %}<i class="bi bi-arrow-{{ 'up' if current_direction == 'asc' else 'down' }}"></i>{% endif %}
+                                </a>
+                            </th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if claims %}
+                            {% for claim in claims %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ claim.billing_id }}</span></td>
+                                <td>{{ claim.claim_billing_date.strftime('%Y-%m-%d') if claim.claim_billing_date else 'N/A' }}</td>
+                                <td>
+                                    <a href="{{ url_for('encounter_view', encounter_id=claim.encounter_id) }}" class="text-decoration-none">
+                                        {{ claim.encounter_id }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if claim.first_name %}
+                                        {{ claim.first_name }} {{ claim.last_name }}
+                                    {% else %}
+                                        <span class="text-muted">Unknown</span>
+                                    {% endif %}
+                                </td>
+                                <td class="fw-bold">${{ "%.2f"|format(claim.billed_amount) }}</td>
+                                <td>
+                                    <span class="badge bg-{{ {'Pending': 'warning', 'Approved': 'success', 'Paid': 'primary', 'Denied': 'danger', 'Rejected': 'danger'}.get(claim.claim_status, 'secondary') }}">
+                                        {{ claim.claim_status }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('claim_view', billing_id=claim.billing_id) }}" class="btn btn-sm btn-info" title="View"><i class="bi bi-eye"></i></a>
+                                    <a href="{{ url_for('claim_edit', billing_id=claim.billing_id) }}" class="btn btn-sm btn-warning" title="Edit"><i class="bi bi-pencil"></i></a>
+                                    
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ loop.index }}" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+
+                                    <div class="modal fade text-start" id="deleteModal{{ loop.index }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-danger text-white">
+                                                    <h5 class="modal-title">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to delete claim <strong>{{ claim.billing_id }}</strong>?
+                                                    <br><small class="text-muted">This action cannot be undone.</small>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form action="{{ url_for('claim_delete', billing_id=claim.billing_id) }}" method="POST">
+                                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="7" class="text-center py-5 text-muted">No claims found matching your criteria.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
