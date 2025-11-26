@@ -12,7 +12,7 @@ You need to have the following software installed on your machine:
 
 -   **MySQL Server**: The database used for this project.
 -   **Python 3.8+**: For the backend server.
--   **Node.js and npm**: For the frontend development server and package management.
+-   **Jinja2**: For the frontend development server and package management.
 
 ### Installation & Database Setup
 

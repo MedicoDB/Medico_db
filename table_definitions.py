@@ -77,7 +77,7 @@ CREATE_TABLES_SQL = [
         diagnosis_id VARCHAR(50) PRIMARY KEY,
         encounter_id VARCHAR(50),
         diagnosis_code VARCHAR(50),
-        diagnosis_description TEXT DEFAULT 'Not provided',
+        diagnosis_description TEXT,
         primary_flag BOOLEAN DEFAULT 1,
         chronic_flag BOOLEAN,
         FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id) ON DELETE CASCADE ON UPDATE CASCADE
@@ -88,7 +88,7 @@ CREATE_TABLES_SQL = [
         procedure_id VARCHAR(50) PRIMARY KEY,
         encounter_id VARCHAR(50),
         procedure_code VARCHAR(50),
-        procedure_description TEXT DEFAULT 'Not provided',
+        procedure_description TEXT,
         procedure_date DATE,
         provider_id VARCHAR(50),
         procedure_cost DECIMAL(10, 2),
@@ -162,3 +162,14 @@ CREATE_TABLES_SQL = [
     );
     """
 ]
+
+# Database Constraints - Patient Silme Engelleri:
+# 
+# 1. encounters tablosu: ON DELETE RESTRICT (encounter varsa silinemez)
+# 2. claims_and_billing tablosu: ON DELETE RESTRICT (claim varsa silinemez)
+# 3. denials kontrolü: Application level kontrol (models.py - PatientsModel.delete())
+#
+# Not: CHECK constraint DELETE işlemlerini kontrol edemez (sadece INSERT/UPDATE için çalışır)
+# Bu yüzden denials kontrolü application level'da yapılıyor (models.py)
+#
+CREATE_TRIGGERS_SQL = []  # Trigger kullanmıyoruz, sadece application level kontrol

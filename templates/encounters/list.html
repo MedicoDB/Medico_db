@@ -1,0 +1,74 @@
+{% extends "layout.html" %}
+
+{% block title %}Encounters - Hospital Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-clipboard-pulse"></i> Encounters</h1>
+        <a href="{{ url_for('patients_list') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Patients
+        </a>
+    </div>
+
+    {% if encounters %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Showing first <strong>{{ encounters|length }}</strong> encounters (limited to 1000 for performance).
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Encounter ID</th>
+                            <th>Visit Date</th>
+                            <th>Patient</th>
+                            <th>Provider</th>
+                            <th>Department</th>
+                            <th>Visit Type</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for encounter in encounters %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('encounter_view', encounter_id=encounter.encounter_id) }}" class="text-decoration-none">
+                                    <strong>{{ encounter.encounter_id }}</strong>
+                                </a>
+                            </td>
+                            <td>{{ encounter.visit_date.strftime('%Y-%m-%d') if encounter.visit_date else 'N/A' }}</td>
+                            <td>
+                                {{ encounter.patient_first_name }} {{ encounter.patient_last_name }}
+                                <br><small class="text-muted">{{ encounter.patient_id }}</small>
+                            </td>
+                            <td>{{ encounter.provider_name or 'N/A' }}</td>
+                            <td>{{ encounter.department or 'N/A' }}</td>
+                            <td>{{ encounter.visit_type or 'N/A' }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if encounter.status == 'Completed' else 'warning' }}">
+                                    {{ encounter.status or 'N/A' }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('encounter_view', encounter_id=encounter.encounter_id) }}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No encounters found.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -1,10 +1,11 @@
 import mysql.connector
 from mysql.connector import errorcode
 from settings import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
-from table_definitions import CREATE_TABLES_SQL
+from table_definitions import CREATE_TABLES_SQL, CREATE_TRIGGERS_SQL
 import os
 
 def setup_database():
+    conn = None
     try:
         print(f"Connecting to MySQL server as user '{DB_USER}'...")
         conn = mysql.connector.connect(
@@ -34,6 +35,10 @@ def setup_database():
         cursor = conn.cursor()
         print("Database connection successful.")
 
+        # Attempt to enable LOAD DATA LOCAL INFILE on the server.
+        # NOTE: This command requires SUPER or SYSTEM_VARIABLES_ADMIN privileges.
+        cursor.execute('SET GLOBAL local_infile = 1')
+
         print("Creating tables...")
         for statement in CREATE_TABLES_SQL:
             try:
@@ -41,6 +46,9 @@ def setup_database():
             except mysql.connector.Error as err:
                 print(f"Error while creating a table: {err}")
         print("All tables created successfully!")
+        
+        # Triggers are optional - currently using application-level validation
+        # CREATE_TRIGGERS_SQL is empty, so we skip trigger creation
 
         print("\nLoading data from CSV files...")
         
@@ -63,6 +71,10 @@ def setup_database():
 
         for table_name, file_name, columns_and_setters in csv_files_in_order:
             file_path = os.path.join(dataset_path, file_name).replace('\\', '/')
+            if not os.path.exists(file_path):
+                print(f"  -> WARNING: File not found, skipping: {file_name}")
+                continue
+                
             print(f"  -> Loading: {file_name} -> {table_name}")
             
             load_query = f"""
@@ -86,7 +98,7 @@ def setup_database():
         else:
             print(f"ERROR: {err}")
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if conn and conn.is_connected():
             cursor.close()
             conn.close()
             print("MySQL connection closed.")
