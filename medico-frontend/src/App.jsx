@@ -6,6 +6,7 @@ import PatientsPage from "./pages/PatiensPage.jsx";
 import EncountersPage from "./pages/EncountersPage.jsx";
 import BillingPage from "./pages/BillingPage.jsx";
 import ReportsPage from "./pages/ReportsPage.jsx";
+import DenialsPage from "./pages/DenialsPage.jsx";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
       <Route path="/procedures" element={<ProceduresPage />} />
       <Route path="/medications" element={<MedicationsPage />} />
       <Route path="/billing" element={<BillingPage />} />
+      <Route path="/denials" element={<DenialsPage />} />
       <Route path="/reports" element={<ReportsPage />} />
     </Routes>
   );

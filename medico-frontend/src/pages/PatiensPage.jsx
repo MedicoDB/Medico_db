@@ -3,25 +3,55 @@ import SharedLayout from "../components/SharedLayout";
 import "./Pages.css";
 import { api } from "../services/api";
 
+const initialForm = {
+  first_name: "",
+  last_name: "",
+  dob: "",
+  gender: "",
+  insurance_type: "",
+  phone: "",
+  email: "",
+  ethnicity: "",
+  marital_status: "",
+  address: "",
+  city: "",
+  state: "",
+  zip: "",
+  registration_date: "",
+};
+
+const PAGE_SIZE = 50;
+
 const PatientsPage = () => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formError, setFormError] = useState(null);
+  const [newPatient, setNewPatient] = useState(initialForm);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [editingPatientId, setEditingPatientId] = useState(null);
+  const canNext = (page + 1) * PAGE_SIZE < total;
+  const canPrev = page > 0;
+  const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
+  const end = total === 0 ? 0 : Math.min(total, page * PAGE_SIZE + patients.length);
 
   useEffect(() => {
     const fetchPatients = async () => {
       try {
         setLoading(true);
-        const data = await api.getPatients(100); // Limit to 100 for display
-        // Client-side search since API doesn't support search yet
-        const filtered = searchTerm 
-          ? data.filter(p => 
-              `${p.first_name} ${p.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              p.patient_id.toLowerCase().includes(searchTerm.toLowerCase())
-            )
-          : data;
-        setPatients(filtered);
+        const { data, total } = await api.getPatients(PAGE_SIZE, page * PAGE_SIZE, searchTerm);
+
+        if (page > 0 && data.length === 0 && total > 0) {
+          setPage((prev) => Math.max(prev - 1, 0));
+          return;
+        }
+
+        setPatients(data);
+        setTotal(total);
         setError(null);
       } catch (err) {
         console.error("Error fetching patients:", err);
@@ -32,10 +62,82 @@ const PatientsPage = () => {
     };
 
     fetchPatients();
-  }, [searchTerm]);
+  }, [searchTerm, refreshKey, page]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
+    setPage(0);
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setNewPatient((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmitPatient = async (e) => {
+    e.preventDefault();
+    setFormError(null);
+    if (!newPatient.first_name || !newPatient.last_name) {
+      setFormError("First name and last name are required.");
+      return;
+    }
+    try {
+      if (editingPatientId) {
+        await api.updatePatient(editingPatientId, newPatient);
+      } else {
+        await api.createPatient(newPatient);
+      }
+      setNewPatient(initialForm);
+      setEditingPatientId(null);
+      setShowAddForm(false);
+      setPage(0);
+      setRefreshKey((prev) => prev + 1);
+      alert(editingPatientId ? "Patient updated successfully." : "Patient added successfully.");
+    } catch (err) {
+      console.error(err);
+      setFormError("Failed to save patient. Please check the information.");
+    }
+  };
+
+  const handleDeletePatient = async (patientId) => {
+    if (!window.confirm("Delete this patient? This action cannot be undone.")) return;
+    try {
+      await api.deletePatient(patientId);
+      setRefreshKey((prev) => prev + 1);
+    } catch (err) {
+      alert("Unable to delete patient. Make sure the patient has no related records.");
+    }
+  };
+
+  const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
+
+  const beginAdd = () => {
+    setShowAddForm(true);
+    setEditingPatientId(null);
+    setNewPatient(initialForm);
+    setFormError(null);
+  };
+
+  const handleEditPatient = (patient) => {
+    setNewPatient({
+      first_name: patient.first_name || "",
+      last_name: patient.last_name || "",
+      dob: patient.dob ? patient.dob.slice(0, 10) : "",
+      gender: patient.gender || "",
+      insurance_type: patient.insurance_type || "",
+      phone: patient.phone || "",
+      email: patient.email || "",
+      ethnicity: patient.ethnicity || "",
+      marital_status: patient.marital_status || "",
+      address: patient.address || "",
+      city: patient.city || "",
+      state: patient.state || "",
+      zip: patient.zip || "",
+      registration_date: patient.registration_date ? patient.registration_date.slice(0, 10) : "",
+    });
+    setEditingPatientId(patient.patient_id);
+    setShowAddForm(true);
+    setFormError(null);
   };
 
   return (
@@ -45,7 +147,7 @@ const PatientsPage = () => {
       activePage="patients"
       searchValue={searchTerm}
       onSearchChange={handleSearch}
-      onAddNew={() => alert('Add Patient feature coming soon!')}
+      onAddNew={beginAdd}
     >
       <div className="page-grid">
         <div className="page-card">
@@ -57,7 +159,9 @@ const PatientsPage = () => {
         <div className="page-card">
           <h3>➕ Add New Patient</h3>
           <p>Create a new patient profile including demographics, insurance and contacts.</p>
-          <button className="hp-primary-btn" onClick={() => alert('Add Patient feature coming soon! This will allow you to create new patient records.')}>Add Patient</button>
+          <button className="hp-primary-btn" onClick={beginAdd}>
+            {showAddForm && !editingPatientId ? "Close Form" : editingPatientId ? "Edit Patient" : "Add Patient"}
+          </button>
         </div>
 
         <div className="page-card">
@@ -67,8 +171,87 @@ const PatientsPage = () => {
         </div>
       </div>
 
+      {showAddForm && (
+        <div className="page-section page-form">
+          <h3>{editingPatientId ? "Edit Patient" : "Create Patient"}</h3>
+          <form className="form-grid" onSubmit={handleSubmitPatient}>
+            <label>
+              First Name
+              <input name="first_name" value={newPatient.first_name} onChange={handleFormChange} required />
+            </label>
+            <label>
+              Last Name
+              <input name="last_name" value={newPatient.last_name} onChange={handleFormChange} required />
+            </label>
+            <label>
+              Date of Birth
+              <input type="date" name="dob" value={newPatient.dob} onChange={handleFormChange} />
+            </label>
+            <label>
+              Gender
+              <input name="gender" value={newPatient.gender} onChange={handleFormChange} />
+            </label>
+            <label>
+              Insurance Type
+              <input name="insurance_type" value={newPatient.insurance_type} onChange={handleFormChange} placeholder="e.g. UHC" />
+            </label>
+            <label>
+              Phone
+              <input name="phone" value={newPatient.phone} onChange={handleFormChange} />
+            </label>
+            <label>
+              Email
+              <input type="email" name="email" value={newPatient.email} onChange={handleFormChange} />
+            </label>
+            <label>
+              Ethnicity
+              <input name="ethnicity" value={newPatient.ethnicity} onChange={handleFormChange} />
+            </label>
+            <label>
+              Marital Status
+              <input name="marital_status" value={newPatient.marital_status} onChange={handleFormChange} />
+            </label>
+            <label>
+              Address
+              <input name="address" value={newPatient.address} onChange={handleFormChange} />
+            </label>
+            <label>
+              City
+              <input name="city" value={newPatient.city} onChange={handleFormChange} />
+            </label>
+            <label>
+              State
+              <input name="state" value={newPatient.state} onChange={handleFormChange} />
+            </label>
+            <label>
+              ZIP
+              <input name="zip" value={newPatient.zip} onChange={handleFormChange} />
+            </label>
+            <label>
+              Registration Date
+              <input type="date" name="registration_date" value={newPatient.registration_date} onChange={handleFormChange} />
+            </label>
+            {formError && <p className="form-error">{formError}</p>}
+            <div className="form-actions">
+              <button type="submit" className="hp-primary-btn">{editingPatientId ? "Update Patient" : "Save Patient"}</button>
+              <button
+                type="button"
+                className="hp-secondary-btn"
+                onClick={() => {
+                  setShowAddForm(false);
+                  setEditingPatientId(null);
+                  setNewPatient(initialForm);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <div className="page-section">
-        <h3>Patient List ({patients.length} patients)</h3>
+        <h3>Patient List ({total.toLocaleString()} total)</h3>
         {loading ? (
           <div style={{ padding: '20px', textAlign: 'center' }}>Loading patients...</div>
         ) : error ? (
@@ -82,12 +265,13 @@ const PatientsPage = () => {
                 <th>Encounters</th>
                 <th>First Visit</th>
                 <th>Last Visit</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {patients.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
                     No patients found
                   </td>
                 </tr>
@@ -99,12 +283,41 @@ const PatientsPage = () => {
                     <td>{patient.encounter_count || 0}</td>
                     <td>{patient.first_visit ? new Date(patient.first_visit).toLocaleDateString() : 'N/A'}</td>
                     <td>{patient.last_visit ? new Date(patient.last_visit).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                      <button
+                        className="hp-secondary-btn"
+                        onClick={() => handleEditPatient(patient)}
+                        style={{ marginRight: 8 }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="hp-danger-btn"
+                        onClick={() => handleDeletePatient(patient.patient_id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         )}
+        <div className="page-pagination">
+          <button disabled={page === 0} onClick={() => setPage((prev) => Math.max(prev - 1, 0))}>
+            ← Previous
+          </button>
+          <span>
+            Showing {start.toLocaleString()}-{end.toLocaleString()} of {total.toLocaleString()}
+          </span>
+          <button
+            disabled={(page + 1) * PAGE_SIZE >= total}
+            onClick={() => setPage((prev) => prev + 1)}
+          >
+            Next →
+          </button>
+        </div>
       </div>
     </SharedLayout>
   );

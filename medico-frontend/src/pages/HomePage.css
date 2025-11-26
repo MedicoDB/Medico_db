@@ -234,6 +234,21 @@ body {
   border-color: var(--hp-accent);
 }
 
+.hp-danger-btn {
+  padding: 6px 12px;
+  background: #b91c1c;
+  color: #fff;
+  border: none;
+  border-radius: var(--hp-radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.hp-danger-btn:hover {
+  opacity: 0.9;
+}
+
 .hp-link-btn {
   padding: 0;
   background: transparent;

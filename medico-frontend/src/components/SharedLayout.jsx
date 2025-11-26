@@ -57,6 +57,9 @@ const SharedLayout = ({ title, subtitle, children, activePage, searchValue = "",
           <Link to="/billing">
             <button className={`hp-nav-item ${location.pathname === "/billing" ? "hp-nav-item--active" : ""}`}>Billing & Claims</button>
           </Link>
+          <Link to="/denials">
+            <button className={`hp-nav-item ${location.pathname === "/denials" ? "hp-nav-item--active" : ""}`}>Denials</button>
+          </Link>
           <Link to="/reports">
             <button className={`hp-nav-item ${location.pathname === "/reports" ? "hp-nav-item--active" : ""}`}>Reports</button>
           </Link>

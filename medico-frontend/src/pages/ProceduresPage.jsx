@@ -3,18 +3,43 @@ import SharedLayout from "../components/SharedLayout";
 import "./Pages.css";
 import { api } from "../services/api";
 
+const PAGE_SIZE = 50;
+
+const emptyProcedure = {
+  encounter_id: "",
+  procedure_code: "",
+  procedure_description: "",
+  procedure_date: "",
+  provider_id: "",
+  procedure_cost: "",
+};
+
 const ProceduresPage = () => {
   const [procedures, setProcedures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formError, setFormError] = useState(null);
+  const [newProcedure, setNewProcedure] = useState(emptyProcedure);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [editingProcedureId, setEditingProcedureId] = useState(null);
 
   useEffect(() => {
     const fetchProcedures = async () => {
       try {
         setLoading(true);
-        const data = await api.getProcedures(100, searchTerm);
+        const { data, total } = await api.getProcedures(PAGE_SIZE, page * PAGE_SIZE, searchTerm);
+
+        if (page > 0 && data.length === 0 && total > 0) {
+          setPage((prev) => Math.max(prev - 1, 0));
+          return;
+        }
+
         setProcedures(data);
+        setTotal(total);
         setError(null);
       } catch (err) {
         console.error("Error fetching procedures:", err);
@@ -25,10 +50,81 @@ const ProceduresPage = () => {
     };
 
     fetchProcedures();
-  }, [searchTerm]);
+  }, [searchTerm, refreshKey, page]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
+    setPage(0);
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setNewProcedure((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddProcedure = async (e) => {
+    e.preventDefault();
+    setFormError(null);
+    if (!newProcedure.encounter_id) {
+      setFormError("Encounter ID is required.");
+      return;
+    }
+    try {
+      const payload = {
+        ...newProcedure,
+        procedure_cost: Number(newProcedure.procedure_cost) || 0,
+      };
+      if (editingProcedureId) {
+        await api.updateProcedure(editingProcedureId, payload);
+      } else {
+        await api.createProcedure(payload);
+      }
+      setNewProcedure(emptyProcedure);
+      setEditingProcedureId(null);
+      setShowAddForm(false);
+      setPage(0);
+      setRefreshKey((prev) => prev + 1);
+      alert(editingProcedureId ? "Procedure updated." : "Procedure added.");
+    } catch (err) {
+      console.error(err);
+      setFormError("Failed to save procedure. Verify encounter/provider IDs.");
+    }
+  };
+
+  const handleDeleteProcedure = async (procedureId) => {
+    if (!window.confirm("Delete this procedure?")) return;
+    try {
+      await api.deleteProcedure(procedureId);
+      setRefreshKey((prev) => prev + 1);
+    } catch (err) {
+      alert("Unable to delete procedure.");
+    }
+  };
+
+  const canPrev = page > 0;
+  const canNext = (page + 1) * PAGE_SIZE < total;
+  const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
+  const end = total === 0 ? 0 : Math.min(total, page * PAGE_SIZE + procedures.length);
+
+  const beginCreate = () => {
+    setNewProcedure(emptyProcedure);
+    setEditingProcedureId(null);
+    setShowAddForm(true);
+    setFormError(null);
+  };
+
+  const handleEditProcedure = (procedure) => {
+    setNewProcedure({
+      encounter_id: procedure.encounter_id || "",
+      procedure_code: procedure.procedure_code || "",
+      procedure_description: procedure.procedure_description || "",
+      procedure_date: procedure.procedure_date ? procedure.procedure_date.slice(0, 10) : "",
+      provider_id: procedure.provider_id || "",
+      procedure_cost: procedure.procedure_cost ?? "",
+    });
+    setEditingProcedureId(procedure.procedure_id);
+    setShowAddForm(true);
+    setFormError(null);
   };
 
   return (
@@ -38,7 +134,7 @@ const ProceduresPage = () => {
       activePage="procedures"
       searchValue={searchTerm}
       onSearchChange={handleSearch}
-      onAddNew={() => alert('Add New Procedure feature coming soon!')}
+      onAddNew={beginCreate}
     >
       <div className="page-grid">
         <div className="page-card">
@@ -50,7 +146,9 @@ const ProceduresPage = () => {
         <div className="page-card">
           <h3>➕ Add Procedure</h3>
           <p>Add a new medical procedure associated with encounter & provider.</p>
-          <button className="hp-primary-btn" onClick={() => alert('Add Procedure feature coming soon!')}>Add Procedure</button>
+          <button className="hp-primary-btn" onClick={() => (showAddForm ? setShowAddForm(false) : beginCreate())}>
+            {showAddForm ? "Close Form" : editingProcedureId ? "Edit Procedure" : "Add Procedure"}
+          </button>
         </div>
 
         <div className="page-card">
@@ -60,8 +158,55 @@ const ProceduresPage = () => {
         </div>
       </div>
 
+      {showAddForm && (
+        <div className="page-section page-form">
+          <h3>{editingProcedureId ? "Edit Procedure" : "Create Procedure"}</h3>
+          <form className="form-grid" onSubmit={handleAddProcedure}>
+            <label>
+              Encounter ID
+              <input name="encounter_id" value={newProcedure.encounter_id} onChange={handleFormChange} required />
+            </label>
+            <label>
+              Procedure Code
+              <input name="procedure_code" value={newProcedure.procedure_code} onChange={handleFormChange} />
+            </label>
+            <label>
+              Description
+              <input name="procedure_description" value={newProcedure.procedure_description} onChange={handleFormChange} />
+            </label>
+            <label>
+              Procedure Date
+              <input type="date" name="procedure_date" value={newProcedure.procedure_date} onChange={handleFormChange} />
+            </label>
+            <label>
+              Provider ID
+              <input name="provider_id" value={newProcedure.provider_id} onChange={handleFormChange} />
+            </label>
+            <label>
+              Cost
+              <input name="procedure_cost" value={newProcedure.procedure_cost} onChange={handleFormChange} />
+            </label>
+            {formError && <p className="form-error">{formError}</p>}
+            <div className="form-actions">
+              <button type="submit" className="hp-primary-btn">{editingProcedureId ? "Update Procedure" : "Save Procedure"}</button>
+              <button
+                type="button"
+                className="hp-secondary-btn"
+                onClick={() => {
+                  setShowAddForm(false);
+                  setEditingProcedureId(null);
+                  setNewProcedure(emptyProcedure);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <div className="page-section">
-        <h3>Recent Procedures ({procedures.length} shown)</h3>
+        <h3>Recent Procedures ({total.toLocaleString()} total)</h3>
         {loading ? (
           <div style={{ padding: '20px', textAlign: 'center' }}>Loading procedures...</div>
         ) : error ? (
@@ -76,12 +221,13 @@ const ProceduresPage = () => {
                 <th>Cost</th>
                 <th>Provider</th>
                 <th>Patient</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {procedures.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>
                     No procedures found
                   </td>
                 </tr>
@@ -94,12 +240,31 @@ const ProceduresPage = () => {
                     <td>${procedure.procedure_cost ? parseFloat(procedure.procedure_cost).toFixed(2) : '0.00'}</td>
                     <td>{procedure.provider_name || 'N/A'}</td>
                     <td>{procedure.first_name} {procedure.last_name}</td>
+                    <td>
+                      <button className="hp-secondary-btn" onClick={() => handleEditProcedure(procedure)} style={{ marginRight: 8 }}>
+                        Edit
+                      </button>
+                      <button className="hp-danger-btn" onClick={() => handleDeleteProcedure(procedure.procedure_id)}>
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         )}
+        <div className="page-pagination">
+          <button disabled={!canPrev} onClick={() => setPage((prev) => Math.max(prev - 1, 0))}>
+            ← Previous
+          </button>
+          <span>
+            Showing {start.toLocaleString()}-{end.toLocaleString()} of {total.toLocaleString()}
+          </span>
+          <button disabled={!canNext} onClick={() => setPage((prev) => prev + 1)}>
+            Next →
+          </button>
+        </div>
       </div>
     </SharedLayout>
   );

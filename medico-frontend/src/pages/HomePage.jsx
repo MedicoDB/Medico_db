@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./HomePage.css";
 import { api } from "../services/api";
 
@@ -15,23 +15,38 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        const data = await api.getDashboardStats();
-        setStats(data);
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching dashboard stats:", err);
-        setError("Failed to load dashboard statistics");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const navigate = useNavigate();
 
-    fetchStats();
+  const fetchStats = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await api.getDashboardStats();
+      setStats(data);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching dashboard stats:", err);
+      setError("Failed to load dashboard statistics");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  const handleLiveDashboard = () => {
+    document.getElementById("dashboard-stats")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleQuickDemo = async () => {
+    await fetchStats();
+    alert("Dashboard refreshed with the latest demo data.");
+  };
+
+  const handleNewEncounter = () => {
+    navigate("/encounters?action=new");
+  };
 
   return (
     <div className="hp-root">
@@ -87,7 +102,7 @@ const HomePage = () => {
               className="hp-search"
               placeholder="Search patients, encounters..."
             />
-            <button className="hp-primary-btn">+ New Encounter</button>
+            <button className="hp-primary-btn" onClick={handleNewEncounter}>+ New Encounter</button>
           </div>
         </header>
 
@@ -101,8 +116,8 @@ const HomePage = () => {
               Monitor patient journeys from admission to discharge, track procedures & medications, and keep financials aligned – all from a single modern dashboard.
             </p>
             <div className="hp-hero-actions">
-              <button className="hp-primary-btn" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>View Live Dashboard</button>
-              <button className="hp-secondary-btn" onClick={() => alert('Demo data is already loaded! Check the Patients, Encounters, Procedures, and Medications pages to see real data from your database.')}>Quick Demo Data</button>
+              <button className="hp-primary-btn" onClick={handleLiveDashboard}>View Live Dashboard</button>
+              <button className="hp-secondary-btn" onClick={handleQuickDemo}>Quick Demo Data</button>
             </div>
             <div className="hp-hero-meta">
               <span>✓ Real hospital dataset</span>
@@ -112,7 +127,7 @@ const HomePage = () => {
           </div>
 
           <div className="hp-hero-right">
-            <div className="hp-hero-card hp-hero-card--gradient">
+            <div className="hp-hero-card hp-hero-card--gradient" id="dashboard-stats">
               <p className="hp-hero-card-label">Today's Snapshot</p>
               {loading ? (
                 <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>
@@ -206,32 +221,19 @@ const HomePage = () => {
                 <button className="hp-link-btn">View Medications →</button>
               </Link>
             </div>
+
+            <div className="hp-card">
+              <div className="hp-card-icon hp-card-icon--denials">⚖️</div>
+              <h4>Denials</h4>
+              <p>Track claim denials, reasons, appeals and final outcomes.</p>
+              <Link to="/denials">
+                <button className="hp-link-btn">Manage Denials →</button>
+              </Link>
+            </div>
           </div>
         </section>
 
         {/* Bottom Section */}
-        <section className="hp-section hp-section--split">
-          <div className="hp-section-panel">
-            <h3>Why this matters for the project?</h3>
-            <p>
-              This UI is built around real relations: patient → encounter → procedure / medication, plus billing and denials. It helps you visually validate database design and SQL queries from the backend.
-            </p>
-            <ul className="hp-list">
-              <li>Visual proof of your ERD and foreign keys</li>
-              <li>Easy way to demo queries & reports</li>
-              <li>Clear separation of frontend, backend and database layers</li>
-            </ul>
-          </div>
-
-          <div className="hp-section-panel hp-section-panel--bordered">
-            <h3>Next steps for you (Frontend)</h3>
-            <ol className="hp-list hp-list--ordered">
-              <li>Connect this page to real API endpoints.</li>
-              <li>Add real navigation to Procedures & Medications pages you’ll build.</li>
-              <li>Replace static numbers with live stats from encounters, procedures and medications tables.</li>
-            </ol>
-          </div>
-        </section>
       </main>
     </div>
   );
