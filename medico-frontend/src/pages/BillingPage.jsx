@@ -5,6 +5,17 @@ import { api } from "../services/api";
 
 const PAGE_SIZE = 50;
 
+const emptyClaim = {
+  patient_id: "",
+  encounter_id: "",
+  insurance_provider: "",
+  payment_method: "",
+  billed_amount: "",
+  paid_amount: "",
+  claim_status: "Pending",
+  claim_billing_date: "",
+};
+
 const BillingPage = () => {
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,16 +24,7 @@ const BillingPage = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formError, setFormError] = useState(null);
-  const [newClaim, setNewClaim] = useState({
-    patient_id: "",
-    encounter_id: "",
-    insurance_provider: "",
-    payment_method: "",
-    billed_amount: "",
-    paid_amount: "",
-    claim_status: "Pending",
-    claim_billing_date: "",
-  });
+  const [newClaim, setNewClaim] = useState(emptyClaim);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
 
@@ -74,16 +76,7 @@ const BillingPage = () => {
         billed_amount: Number(newClaim.billed_amount) || 0,
         paid_amount: Number(newClaim.paid_amount) || 0,
       });
-      setNewClaim({
-        patient_id: "",
-        encounter_id: "",
-        insurance_provider: "",
-        payment_method: "",
-        billed_amount: "",
-        paid_amount: "",
-        claim_status: "Pending",
-        claim_billing_date: "",
-      });
+      setNewClaim(emptyClaim);
       setShowAddForm(false);
       setPage(0);
       setRefreshKey((prev) => prev + 1);
@@ -103,6 +96,7 @@ const BillingPage = () => {
       alert("Unable to delete claim.");
     }
   };
+
   const canPrev = page > 0;
   const canNext = (page + 1) * PAGE_SIZE < total;
   const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
@@ -113,29 +107,37 @@ const BillingPage = () => {
       title="Billing & Claims"
       subtitle="Manage billing, claims, and payment information."
       activePage="billing"
-      searchValue={searchTerm}
-      onSearchChange={handleSearch}
-      onAddNew={() => setShowAddForm((prev) => !prev)}
+      showSearch={false}   // 🔥 sağ üst search kapalı
+      showAddNew={false}   // 🔥 sağ üst +New kapalı
     >
+      {/* 🔥 Başlık altına Search + New Claim */}
+      <div className="hp-search-new-container" style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "20px" }}>
+        <input
+          className="hp-search hp-search--big"
+          placeholder="Search claims, patients, encounters..."
+          value={searchTerm}
+          onChange={handleSearch}
+          style={{ flex: "1", maxWidth: "500px" }}
+        />
+        <button className="hp-primary-btn" onClick={() => setShowAddForm((prev) => !prev)}>
+          + New Claim
+        </button>
+      </div>
+
       <div className="page-grid">
         <div className="page-card">
           <h3>💰 Claims Overview</h3>
           <p>View all billing claims and their status.</p>
-          <button className="hp-link-btn" onClick={() => window.scrollTo({ top: document.querySelector('.page-section').offsetTop, behavior: 'smooth' })}>View All →</button>
         </div>
 
         <div className="page-card">
           <h3>➕ New Claim</h3>
           <p>Create a new billing claim for a patient encounter.</p>
-          <button className="hp-primary-btn" onClick={() => setShowAddForm((prev) => !prev)}>
-            {showAddForm ? "Close Form" : "Add Claim"}
-          </button>
         </div>
 
         <div className="page-card">
           <h3>📊 Claims Analytics</h3>
           <p>Analyze claim approval rates and payment trends.</p>
-          <button className="hp-secondary-btn" onClick={() => alert('Analytics feature coming soon!')}>View Analytics</button>
         </div>
       </div>
 
@@ -251,4 +253,3 @@ const BillingPage = () => {
 };
 
 export default BillingPage;
-

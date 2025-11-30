@@ -31,7 +31,11 @@ const DenialsPage = () => {
     const fetchDenials = async () => {
       try {
         setLoading(true);
-        const { data, total } = await api.getDenials(PAGE_SIZE, page * PAGE_SIZE, searchTerm);
+        const { data, total } = await api.getDenials(
+          PAGE_SIZE,
+          page * PAGE_SIZE,
+          searchTerm
+        );
 
         if (page > 0 && data.length === 0 && total > 0) {
           setPage((prev) => Math.max(prev - 1, 0));
@@ -115,31 +119,58 @@ const DenialsPage = () => {
       title="Denials"
       subtitle="Track claim denials, reasons, appeals, and final outcomes."
       activePage="denials"
-      searchValue={searchTerm}
-      onSearchChange={handleSearch}
-      onAddNew={() => setShowAddForm((prev) => !prev)}
+      showSearch={false}   // sağ üst search kapalı
+      showAddNew={false}   // sağ üst +Add kapalı
     >
+      {/* Başlık altına search bar ve +New Denial butonu */}
+      <div
+        className="hp-search-new-container"
+        style={{
+          display: "flex",
+          gap: "10px",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
+        <input
+          className="hp-search hp-search--big"
+          placeholder="Search denials..."
+          value={searchTerm}
+          onChange={handleSearch}
+          style={{ flex: 1, maxWidth: "500px" }}
+        />
+        <button
+          className="hp-primary-btn"
+          onClick={() => setShowAddForm((prev) => !prev)}
+        >
+          + New Denial
+        </button>
+      </div>
+
       <div className="page-grid">
         <div className="page-card">
           <h3>🚫 Denial Records</h3>
           <p>Review claim denials and appeal progress.</p>
-          <button className="hp-link-btn" onClick={() => window.scrollTo({ top: document.querySelector('.page-section').offsetTop, behavior: 'smooth' })}>
+          <button
+            className="hp-link-btn"
+            onClick={() =>
+              window.scrollTo({
+                top: document.querySelector(".page-section").offsetTop,
+                behavior: "smooth",
+              })
+            }
+          >
             View All →
-          </button>
-        </div>
-
-        <div className="page-card">
-          <h3>➕ Add Denial</h3>
-          <p>Log a new claim denial and its details.</p>
-          <button className="hp-primary-btn" onClick={() => setShowAddForm((prev) => !prev)}>
-            {showAddForm ? "Close Form" : "Add Denial"}
           </button>
         </div>
 
         <div className="page-card">
           <h3>📈 Appeal Tracking</h3>
           <p>Monitor appeal status and outcomes.</p>
-          <button className="hp-secondary-btn" onClick={() => alert('Appeal analytics coming soon!')}>
+          <button
+            className="hp-secondary-btn"
+            onClick={() => alert("Appeal analytics coming soon!")}
+          >
             View Analytics
           </button>
         </div>
@@ -151,44 +182,91 @@ const DenialsPage = () => {
           <form className="form-grid" onSubmit={handleAddDenial}>
             <label>
               Claim ID
-              <input name="claim_id" value={newDenial.claim_id} onChange={handleFormChange} required />
+              <input
+                name="claim_id"
+                value={newDenial.claim_id}
+                onChange={handleFormChange}
+                required
+              />
             </label>
             <label>
               Denial Reason Code
-              <input name="denial_reason_code" value={newDenial.denial_reason_code} onChange={handleFormChange} />
+              <input
+                name="denial_reason_code"
+                value={newDenial.denial_reason_code}
+                onChange={handleFormChange}
+              />
             </label>
             <label>
               Denial Description
-              <input name="denial_reason_description" value={newDenial.denial_reason_description} onChange={handleFormChange} />
+              <input
+                name="denial_reason_description"
+                value={newDenial.denial_reason_description}
+                onChange={handleFormChange}
+              />
             </label>
             <label>
               Denied Amount
-              <input name="denied_amount" value={newDenial.denied_amount} onChange={handleFormChange} />
+              <input
+                name="denied_amount"
+                value={newDenial.denied_amount}
+                onChange={handleFormChange}
+              />
             </label>
             <label>
               Denial Date
-              <input type="date" name="denial_date" value={newDenial.denial_date} onChange={handleFormChange} />
+              <input
+                type="date"
+                name="denial_date"
+                value={newDenial.denial_date}
+                onChange={handleFormChange}
+              />
             </label>
             <label>
               Appeal Filed
-              <input name="appeal_filed" value={newDenial.appeal_filed} onChange={handleFormChange} />
+              <input
+                name="appeal_filed"
+                value={newDenial.appeal_filed}
+                onChange={handleFormChange}
+              />
             </label>
             <label>
               Appeal Status
-              <input name="appeal_status" value={newDenial.appeal_status} onChange={handleFormChange} />
+              <input
+                name="appeal_status"
+                value={newDenial.appeal_status}
+                onChange={handleFormChange}
+              />
             </label>
             <label>
               Appeal Resolution Date
-              <input type="date" name="appeal_resolution_date" value={newDenial.appeal_resolution_date} onChange={handleFormChange} />
+              <input
+                type="date"
+                name="appeal_resolution_date"
+                value={newDenial.appeal_resolution_date}
+                onChange={handleFormChange}
+              />
             </label>
             <label>
               Final Outcome
-              <input name="final_outcome" value={newDenial.final_outcome} onChange={handleFormChange} />
+              <input
+                name="final_outcome"
+                value={newDenial.final_outcome}
+                onChange={handleFormChange}
+              />
             </label>
             {formError && <p className="form-error">{formError}</p>}
             <div className="form-actions">
-              <button type="submit" className="hp-primary-btn">Save Denial</button>
-              <button type="button" className="hp-secondary-btn" onClick={() => setShowAddForm(false)}>Cancel</button>
+              <button type="submit" className="hp-primary-btn">
+                Save Denial
+              </button>
+              <button
+                type="button"
+                className="hp-secondary-btn"
+                onClick={() => setShowAddForm(false)}
+              >
+                Cancel
+              </button>
             </div>
           </form>
         </div>
@@ -197,9 +275,15 @@ const DenialsPage = () => {
       <div className="page-section">
         <h3>Denials ({total.toLocaleString()} total)</h3>
         {loading ? (
-          <div style={{ padding: '20px', textAlign: 'center' }}>Loading denials...</div>
+          <div style={{ padding: "20px", textAlign: "center" }}>
+            Loading denials...
+          </div>
         ) : error ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#ff4444' }}>{error}</div>
+          <div
+            style={{ padding: "20px", textAlign: "center", color: "#ff4444" }}
+          >
+            {error}
+          </div>
         ) : (
           <table className="page-table">
             <thead>
@@ -217,7 +301,7 @@ const DenialsPage = () => {
             <tbody>
               {denials.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan="8" style={{ textAlign: "center", padding: "20px" }}>
                     No denials found
                   </td>
                 </tr>
@@ -232,7 +316,10 @@ const DenialsPage = () => {
                     <td>{denial.appeal_status || 'N/A'}</td>
                     <td>{denial.final_outcome || 'N/A'}</td>
                     <td>
-                      <button className="hp-danger-btn" onClick={() => handleDeleteDenial(denial.denial_id)}>
+                      <button
+                        className="hp-danger-btn"
+                        onClick={() => handleDeleteDenial(denial.denial_id)}
+                      >
                         Delete
                       </button>
                     </td>
@@ -243,13 +330,20 @@ const DenialsPage = () => {
           </table>
         )}
         <div className="page-pagination">
-          <button disabled={!canPrev} onClick={() => setPage((prev) => Math.max(prev - 1, 0))}>
+          <button
+            disabled={!canPrev}
+            onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
+          >
             ← Previous
           </button>
           <span>
-            Showing {start.toLocaleString()}-{end.toLocaleString()} of {total.toLocaleString()}
+            Showing {start.toLocaleString()}-{end.toLocaleString()} of{" "}
+            {total.toLocaleString()}
           </span>
-          <button disabled={!canNext} onClick={() => setPage((prev) => prev + 1)}>
+          <button
+            disabled={!canNext}
+            onClick={() => setPage((prev) => prev + 1)}
+          >
             Next →
           </button>
         </div>
@@ -259,4 +353,3 @@ const DenialsPage = () => {
 };
 
 export default DenialsPage;
-

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./HomePage.css";
 import { api } from "../services/api";
 
@@ -12,8 +12,10 @@ const HomePage = () => {
     avg_stay: 0,
     claims_approval_rate: 0,
   });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchValue, setSearchValue] = useState(""); 
 
   const navigate = useNavigate();
 
@@ -59,25 +61,36 @@ const HomePage = () => {
 
         <nav className="hp-nav">
           <p className="hp-nav-title">Main</p>
+
           <Link to="/">
             <button className="hp-nav-item hp-nav-item--active">Dashboard</button>
           </Link>
+
           <Link to="/patients">
             <button className="hp-nav-item">Patients</button>
           </Link>
+
           <Link to="/encounters">
             <button className="hp-nav-item">Encounters</button>
           </Link>
+
           <Link to="/procedures">
             <button className="hp-nav-item">Procedures</button>
           </Link>
+
           <Link to="/medications">
             <button className="hp-nav-item">Medications</button>
           </Link>
 
           <p className="hp-nav-title hp-nav-title--secondary">Analytics</p>
-          <button className="hp-nav-item">Billing & Claims</button>
-          <button className="hp-nav-item">Reports</button>
+
+          <Link to="/billing">
+            <button className="hp-nav-item">Billing & Claims</button>
+          </Link>
+
+          <Link to="/reports">
+            <button className="hp-nav-item">Reports</button>
+          </Link>
         </nav>
 
         <div className="hp-sidebar-footer">
@@ -97,13 +110,6 @@ const HomePage = () => {
               Centralized view of patients, encounters, procedures and medications.
             </p>
           </div>
-          <div className="hp-topbar-actions">
-            <input
-              className="hp-search"
-              placeholder="Search patients, encounters..."
-            />
-            <button className="hp-primary-btn" onClick={handleNewEncounter}>+ New Encounter</button>
-          </div>
         </header>
 
         {/* Hero Section */}
@@ -112,13 +118,21 @@ const HomePage = () => {
             <h2 className="hp-hero-title">
               Smarter Hospital Management with <span>Medico Platform</span>
             </h2>
+
             <p className="hp-hero-text">
-              Monitor patient journeys from admission to discharge, track procedures & medications, and keep financials aligned – all from a single modern dashboard.
+              Monitor patient journeys from admission to discharge, track procedures & medications,
+              and keep financials aligned – all from a single modern dashboard.
             </p>
+
             <div className="hp-hero-actions">
-              <button className="hp-primary-btn" onClick={handleLiveDashboard}>View Live Dashboard</button>
-              <button className="hp-secondary-btn" onClick={handleQuickDemo}>Quick Demo Data</button>
+              <button className="hp-primary-btn" onClick={handleLiveDashboard}>
+                View Live Dashboard
+              </button>
+              <button className="hp-secondary-btn" onClick={handleQuickDemo}>
+                Quick Demo Data
+              </button>
             </div>
+
             <div className="hp-hero-meta">
               <span>✓ Real hospital dataset</span>
               <span>✓ Encounter–Procedure–Medication links</span>
@@ -129,10 +143,11 @@ const HomePage = () => {
           <div className="hp-hero-right">
             <div className="hp-hero-card hp-hero-card--gradient" id="dashboard-stats">
               <p className="hp-hero-card-label">Today's Snapshot</p>
+
               {loading ? (
-                <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>
+                <div style={{ padding: "20px", textAlign: "center" }}>Loading...</div>
               ) : error ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#ff4444' }}>{error}</div>
+                <div style={{ padding: "20px", textAlign: "center", color: "#ff4444" }}>{error}</div>
               ) : (
                 <div className="hp-hero-card-grid">
                   <div>
@@ -159,33 +174,40 @@ const HomePage = () => {
               <div className="hp-mini-card">
                 <p className="hp-mini-label">Average stay</p>
                 <p className="hp-mini-main">
-                  {loading ? '...' : stats.avg_stay} <span>days</span>
+                  {loading ? "..." : stats.avg_stay} <span>days</span>
                 </p>
-                <p className="hp-mini-trend hp-mini-trend--up">
-                  ▲ 8% better than last week
-                </p>
+                <p className="hp-mini-trend hp-mini-trend--up">▲ 8% better than last week</p>
               </div>
+
               <div className="hp-mini-card">
                 <p className="hp-mini-label">Claims approval</p>
                 <p className="hp-mini-main">
-                  {loading ? '...' : stats.claims_approval_rate}<span>%</span>
+                  {loading ? "..." : stats.claims_approval_rate}
+                  <span>%</span>
                 </p>
-                <p className="hp-mini-trend hp-mini-trend--neutral">
-                  Stable vs last week
-                </p>
+                <p className="hp-mini-trend hp-mini-trend--neutral">Stable vs last week</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Quick Access Cards */}
-        <section className="hp-section">
-          <div className="hp-section-header">
-            <h3>Quick access</h3>
-            <p>Jump directly into core modules of the system.</p>
+        {/* 🔥 SEARCH BAR + New Encounter */}
+        <section className="hp-section" style={{ marginTop: "30px" }}>
+          <div className="hp-search-new-container" style={{ display: "flex", justifyContent: "center", gap: "10px", alignItems: "center" }}>
+            <input
+              className="hp-search hp-search--big"
+              placeholder="Search patients, encounters, medications..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              style={{ flex: "1", maxWidth: "500px" }}
+            />
+            <button className="hp-primary-btn" onClick={handleNewEncounter}>
+              + New 
+            </button>
           </div>
 
-          <div className="hp-card-grid">
+          {/* Quick Access Cards */}
+          <div className="hp-card-grid" style={{ marginTop: "20px" }}>
             <div className="hp-card">
               <div className="hp-card-icon hp-card-icon--patients">👤</div>
               <h4>Patients</h4>
@@ -232,12 +254,9 @@ const HomePage = () => {
             </div>
           </div>
         </section>
-
-        {/* Bottom Section */}
       </main>
     </div>
   );
 };
 
 export default HomePage;
-

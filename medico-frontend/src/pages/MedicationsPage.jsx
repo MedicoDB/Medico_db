@@ -138,29 +138,37 @@ const MedicationsPage = () => {
       title="Medications"
       subtitle="Review medication history, prescribed dosages and prescriber information."
       activePage="medications"
-      searchValue={searchTerm}
-      onSearchChange={handleSearch}
-      onAddNew={beginCreate}
+      showSearch={false}   // 🔥 sağ üst search kapalı
+      showAddNew={false}   // 🔥 sağ üst +New kapalı
     >
+      {/* 🔥 Başlık altına Search ve +New Medication */}
+      <div className="hp-search-new-container" style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "20px" }}>
+        <input
+          className="hp-search hp-search--big"
+          placeholder="Search medications, encounters, prescribers..."
+          value={searchTerm}
+          onChange={handleSearch}
+          style={{ flex: "1", maxWidth: "500px" }}
+        />
+        <button className="hp-primary-btn" onClick={beginCreate}>
+          + New Medication
+        </button>
+      </div>
+
       <div className="page-grid">
         <div className="page-card">
           <h3>💊 Medication List</h3>
           <p>Explore all prescribed medications across patient records.</p>
-          <button className="hp-link-btn" onClick={() => window.scrollTo({ top: document.querySelector('.page-section').offsetTop, behavior: 'smooth' })}>View All →</button>
         </div>
 
         <div className="page-card">
           <h3>➕ Add Medication</h3>
           <p>Create a new medication entry for a patient & encounter.</p>
-          <button className="hp-primary-btn" onClick={() => (showAddForm ? setShowAddForm(false) : beginCreate())}>
-            {showAddForm ? "Close Form" : editingMedicationId ? "Edit Medication" : "Add Medication"}
-          </button>
         </div>
 
         <div className="page-card">
           <h3>📈 Medication Stats</h3>
           <p>Check top prescribed drugs, dosage patterns and more.</p>
-          <button className="hp-secondary-btn" onClick={() => alert('Analytics feature coming soon!')}>View Analytics</button>
         </div>
       </div>
 

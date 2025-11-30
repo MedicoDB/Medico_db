@@ -14,6 +14,7 @@ const EncountersPage = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formError, setFormError] = useState(null);
+
   const emptyEncounter = {
     patient_id: "",
     provider_id: "",
@@ -28,6 +29,7 @@ const EncountersPage = () => {
     length_of_stay: "",
     readmitted_flag: "",
   };
+
   const [newEncounter, setNewEncounter] = useState(emptyEncounter);
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(0);
@@ -163,32 +165,32 @@ const EncountersPage = () => {
       title="Encounters"
       subtitle="Track visits, admission details, diagnoses and overall patient journey."
       activePage="encounters"
-      searchValue={searchTerm}
-      onSearchChange={handleSearch}
-      onAddNew={beginCreate}
+      showSearch={false}   // 🔥 sağ üst search kapalı
+      showAddNew={false}   // 🔥 sağ üst +New kapalı
     >
+      {/* 🔥 Başlık altına Search ve +New Encounter */}
+      <div className="hp-search-new-container" style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "20px" }}>
+        <input
+          className="hp-search hp-search--big"
+          placeholder="Search patients, encounters, medications..."
+          value={searchTerm}
+          onChange={handleSearch}
+          style={{ flex: "1", maxWidth: "500px" }}
+        />
+        <button className="hp-primary-btn" onClick={beginCreate}>
+          + New Encounter
+        </button>
+      </div>
+
       <div className="page-grid">
         <div className="page-card">
           <h3>📋 Active Encounters</h3>
           <p>View all ongoing patient visits and admissions.</p>
-          <button className="hp-link-btn" onClick={() => window.scrollTo({ top: document.querySelector('.page-section').offsetTop, behavior: 'smooth' })}>Open Dashboard →</button>
-        </div>
-
-        <div className="page-card">
-          <h3>🧪 New Encounter</h3>
-          <p>Create a new encounter and associate with patient and provider records.</p>
-          <button
-            className="hp-primary-btn"
-            onClick={() => (showAddForm ? closeForm() : beginCreate())}
-          >
-            {showAddForm ? "Close Form" : editingEncounterId ? "Edit Encounter" : "Start New Encounter"}
-          </button>
         </div>
 
         <div className="page-card">
           <h3>🕒 Encounter History</h3>
           <p>Search past visits, diagnoses and outcomes by date or provider.</p>
-          <button className="hp-secondary-btn" onClick={() => document.querySelector('.hp-search')?.focus()}>Search Records</button>
         </div>
       </div>
 

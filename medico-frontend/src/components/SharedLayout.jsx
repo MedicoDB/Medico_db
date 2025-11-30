@@ -1,12 +1,23 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import "../pages/HomePage.css"; // aynı stiller kullanılacak
+import "../pages/HomePage.css";
 
-const SharedLayout = ({ title, subtitle, children, activePage, searchValue = "", onSearchChange, onAddNew }) => {
+const SharedLayout = ({
+  title,
+  subtitle,
+  children,
+  activePage,
+  searchValue = "",
+  onSearchChange,
+  onAddNew,
+  showSearch = true,   // 🔥 yeni prop: search bar gösterilsin mi?
+  showAddNew = true    // 🔥 istersen Add New butonunu da kapatabilirsin
+}) => {
   const location = useLocation();
-  
+
   return (
     <div className="hp-root">
+      
       {/* Sidebar */}
       <aside className="hp-sidebar">
         <div className="hp-logo">
@@ -19,49 +30,95 @@ const SharedLayout = ({ title, subtitle, children, activePage, searchValue = "",
 
           <Link to="/">
             <button
-              className={`hp-nav-item ${location.pathname === "/" ? "hp-nav-item--active" : ""}`}
+              className={`hp-nav-item ${
+                location.pathname === "/" ? "hp-nav-item--active" : ""
+              }`}
             >
               Dashboard
             </button>
           </Link>
+
           <Link to="/patients">
             <button
-              className={`hp-nav-item ${activePage === "patients" || location.pathname === "/patients" ? "hp-nav-item--active" : ""}`}
+              className={`hp-nav-item ${
+                activePage === "patients" ||
+                location.pathname === "/patients"
+                  ? "hp-nav-item--active"
+                  : ""
+              }`}
             >
               Patients
             </button>
           </Link>
+
           <Link to="/encounters">
             <button
-              className={`hp-nav-item ${activePage === "encounters" || location.pathname === "/encounters" ? "hp-nav-item--active" : ""}`}
+              className={`hp-nav-item ${
+                activePage === "encounters" ||
+                location.pathname === "/encounters"
+                  ? "hp-nav-item--active"
+                  : ""
+              }`}
             >
               Encounters
             </button>
           </Link>
+
           <Link to="/procedures">
             <button
-              className={`hp-nav-item ${activePage === "procedures" || location.pathname === "/procedures" ? "hp-nav-item--active" : ""}`}
+              className={`hp-nav-item ${
+                activePage === "procedures" ||
+                location.pathname === "/procedures"
+                  ? "hp-nav-item--active"
+                  : ""
+              }`}
             >
               Procedures
             </button>
           </Link>
+
           <Link to="/medications">
             <button
-              className={`hp-nav-item ${activePage === "medications" || location.pathname === "/medications" ? "hp-nav-item--active" : ""}`}
+              className={`hp-nav-item ${
+                activePage === "medications" ||
+                location.pathname === "/medications"
+                  ? "hp-nav-item--active" : ""
+              }`}
             >
               Medications
             </button>
           </Link>
 
           <p className="hp-nav-title hp-nav-title--secondary">Analytics</p>
+
           <Link to="/billing">
-            <button className={`hp-nav-item ${location.pathname === "/billing" ? "hp-nav-item--active" : ""}`}>Billing & Claims</button>
+            <button
+              className={`hp-nav-item ${
+                location.pathname === "/billing" ? "hp-nav-item--active" : ""
+              }`}
+            >
+              Billing & Claims
+            </button>
           </Link>
+
           <Link to="/denials">
-            <button className={`hp-nav-item ${location.pathname === "/denials" ? "hp-nav-item--active" : ""}`}>Denials</button>
+            <button
+              className={`hp-nav-item ${
+                location.pathname === "/denials" ? "hp-nav-item--active" : ""
+              }`}
+            >
+              Denials
+            </button>
           </Link>
+
           <Link to="/reports">
-            <button className={`hp-nav-item ${location.pathname === "/reports" ? "hp-nav-item--active" : ""}`}>Reports</button>
+            <button
+              className={`hp-nav-item ${
+                location.pathname === "/reports" ? "hp-nav-item--active" : ""
+              }`}
+            >
+              Reports
+            </button>
           </Link>
         </nav>
 
@@ -75,22 +132,35 @@ const SharedLayout = ({ title, subtitle, children, activePage, searchValue = "",
       {/* Main Section */}
       <main className="hp-main">
         <header className="hp-topbar">
-          <div>
+          <div className="hp-topbar-left">
             <h1 className="hp-page-title">{title}</h1>
             <p className="hp-page-subtitle">{subtitle}</p>
           </div>
-          <div className="hp-topbar-actions">
-            <input
-              className="hp-search"
-              placeholder="Search..."
-              value={searchValue}
-              onChange={onSearchChange || (() => {})}
-            />
-            <button className="hp-primary-btn" onClick={onAddNew || (() => alert('Add New feature coming soon!'))}>+ Add New</button>
+
+          <div className="hp-topbar-right">
+
+            {/* 🔍 Search bar artık opsiyonel */}
+            {showSearch && (
+              <input
+                className="hp-search"
+                placeholder="Search..."
+                value={searchValue}
+                onChange={onSearchChange || (() => {})}
+              />
+            )}
+
+            {/* ➕ Add New butonu da opsiyonel */}
+            {showAddNew && (
+              <button
+                className="hp-primary-btn"
+                onClick={onAddNew || (() => alert("Add New feature coming soon!"))}
+              >
+                + Add New
+              </button>
+            )}
           </div>
         </header>
 
-        {/* Page Content */}
         <section className="page-content">{children}</section>
       </main>
     </div>

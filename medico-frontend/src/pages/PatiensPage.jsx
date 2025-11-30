@@ -34,8 +34,7 @@ const PatientsPage = () => {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [editingPatientId, setEditingPatientId] = useState(null);
-  const canNext = (page + 1) * PAGE_SIZE < total;
-  const canPrev = page > 0;
+
   const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const end = total === 0 ? 0 : Math.min(total, page * PAGE_SIZE + patients.length);
 
@@ -109,10 +108,8 @@ const PatientsPage = () => {
     }
   };
 
-  const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
-
   const beginAdd = () => {
-    setShowAddForm(true);
+    setShowAddForm((prev) => !prev);
     setEditingPatientId(null);
     setNewPatient(initialForm);
     setFormError(null);
@@ -145,43 +142,84 @@ const PatientsPage = () => {
       title="Patients"
       subtitle="Search and manage patient profiles, demographics and contact information."
       activePage="patients"
-      searchValue={searchTerm}
-      onSearchChange={handleSearch}
-      onAddNew={beginAdd}
+      showSearch={false}
+      showAddNew={false}
     >
+      {/* Search + Add New üst alan */}
+      <div
+        className="hp-search-new-container"
+        style={{
+          display: "flex",
+          gap: "10px",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Search patients..."
+          value={searchTerm}
+          onChange={handleSearch}
+          className="hp-search"
+          style={{
+            flex: 1,
+            maxWidth: "500px",
+            padding: "10px",
+            borderRadius: "8px",
+            border: "1px solid #ccc",
+            fontSize: "15px",
+          }}
+        />
+        <button className="hp-primary-btn" onClick={beginAdd}>
+          {showAddForm && !editingPatientId
+            ? "Close Form"
+            : editingPatientId
+            ? "Edit Patient"
+            : "+ New Patient"}
+        </button>
+      </div>
+
+      {/* Cards */}
       <div className="page-grid">
         <div className="page-card">
           <h3>👤 Patient List</h3>
           <p>Browse all registered patients in the system.</p>
-          <button className="hp-link-btn" onClick={() => window.scrollTo({ top: document.querySelector('.page-section').offsetTop, behavior: 'smooth' })}>View All →</button>
-        </div>
-
-        <div className="page-card">
-          <h3>➕ Add New Patient</h3>
-          <p>Create a new patient profile including demographics, insurance and contacts.</p>
-          <button className="hp-primary-btn" onClick={beginAdd}>
-            {showAddForm && !editingPatientId ? "Close Form" : editingPatientId ? "Edit Patient" : "Add Patient"}
-          </button>
         </div>
 
         <div className="page-card">
           <h3>📊 Demographics</h3>
           <p>View distribution by age, gender, location and insurance coverage.</p>
-          <button className="hp-secondary-btn" onClick={() => alert('Analytics feature coming soon!')}>View Analytics</button>
+          <button
+            className="hp-secondary-btn"
+            onClick={() => alert("Analytics feature coming soon!")}
+          >
+            View Analytics
+          </button>
         </div>
       </div>
 
+      {/* Add/Edit Form */}
       {showAddForm && (
         <div className="page-section page-form">
           <h3>{editingPatientId ? "Edit Patient" : "Create Patient"}</h3>
           <form className="form-grid" onSubmit={handleSubmitPatient}>
             <label>
               First Name
-              <input name="first_name" value={newPatient.first_name} onChange={handleFormChange} required />
+              <input
+                name="first_name"
+                value={newPatient.first_name}
+                onChange={handleFormChange}
+                required
+              />
             </label>
             <label>
               Last Name
-              <input name="last_name" value={newPatient.last_name} onChange={handleFormChange} required />
+              <input
+                name="last_name"
+                value={newPatient.last_name}
+                onChange={handleFormChange}
+                required
+              />
             </label>
             <label>
               Date of Birth
@@ -193,7 +231,12 @@ const PatientsPage = () => {
             </label>
             <label>
               Insurance Type
-              <input name="insurance_type" value={newPatient.insurance_type} onChange={handleFormChange} placeholder="e.g. UHC" />
+              <input
+                name="insurance_type"
+                value={newPatient.insurance_type}
+                onChange={handleFormChange}
+                placeholder="e.g. UHC"
+              />
             </label>
             <label>
               Phone
@@ -229,11 +272,18 @@ const PatientsPage = () => {
             </label>
             <label>
               Registration Date
-              <input type="date" name="registration_date" value={newPatient.registration_date} onChange={handleFormChange} />
+              <input
+                type="date"
+                name="registration_date"
+                value={newPatient.registration_date}
+                onChange={handleFormChange}
+              />
             </label>
             {formError && <p className="form-error">{formError}</p>}
             <div className="form-actions">
-              <button type="submit" className="hp-primary-btn">{editingPatientId ? "Update Patient" : "Save Patient"}</button>
+              <button type="submit" className="hp-primary-btn">
+                {editingPatientId ? "Update Patient" : "Save Patient"}
+              </button>
               <button
                 type="button"
                 className="hp-secondary-btn"
@@ -250,12 +300,13 @@ const PatientsPage = () => {
         </div>
       )}
 
+      {/* Patient Table */}
       <div className="page-section">
         <h3>Patient List ({total.toLocaleString()} total)</h3>
         {loading ? (
-          <div style={{ padding: '20px', textAlign: 'center' }}>Loading patients...</div>
+          <div style={{ padding: "20px", textAlign: "center" }}>Loading patients...</div>
         ) : error ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#ff4444' }}>{error}</div>
+          <div style={{ padding: "20px", textAlign: "center", color: "#ff4444" }}>{error}</div>
         ) : (
           <table className="page-table">
             <thead>
@@ -271,7 +322,7 @@ const PatientsPage = () => {
             <tbody>
               {patients.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan="6" style={{ textAlign: "center", padding: "20px" }}>
                     No patients found
                   </td>
                 </tr>
@@ -279,10 +330,12 @@ const PatientsPage = () => {
                 patients.map((patient) => (
                   <tr key={patient.patient_id}>
                     <td>{patient.patient_id}</td>
-                    <td>{patient.first_name} {patient.last_name}</td>
+                    <td>
+                      {patient.first_name} {patient.last_name}
+                    </td>
                     <td>{patient.encounter_count || 0}</td>
-                    <td>{patient.first_visit ? new Date(patient.first_visit).toLocaleDateString() : 'N/A'}</td>
-                    <td>{patient.last_visit ? new Date(patient.last_visit).toLocaleDateString() : 'N/A'}</td>
+                    <td>{patient.first_visit ? new Date(patient.first_visit).toLocaleDateString() : "N/A"}</td>
+                    <td>{patient.last_visit ? new Date(patient.last_visit).toLocaleDateString() : "N/A"}</td>
                     <td>
                       <button
                         className="hp-secondary-btn"
