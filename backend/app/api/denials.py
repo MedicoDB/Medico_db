@@ -1,8 +1,7 @@
 # app/api/denials.py
 
 from flask import Blueprint, jsonify
-from app.db import get_db_connection 
-
+from ..db import get_conn
 # 'denials_api' adında yeni bir blueprint oluşturuyoruz
 denials_bp = Blueprint('denials_api', __name__, url_prefix='/api/denials')
 
@@ -10,7 +9,7 @@ denials_bp = Blueprint('denials_api', __name__, url_prefix='/api/denials')
 @denials_bp.route('/', methods=['GET'])
 def get_all_denials():
     try:
-        conn = get_db_connection()
+        conn = get_conn()
         cur = conn.cursor(dictionary=True)
 
         # Sorumlu olduğun 'denials' tablosu

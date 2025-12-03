@@ -94,9 +94,23 @@
                             <td>{{ patient.email or 'N/A' }}</td>
                         </tr>
                         <tr>
-                            <th>Insurance:</th>
-                            <td>{{ patient.insurance_name or patient.insurance_type or 'N/A' }}</td>
-                        </tr>
+    <th>Insurance Provider:</th>
+    <td>
+        {% if patient.insurance_name %}
+            {% if patient.insurance_id_fk %}
+                <a href="{{ url_for('insurer_view', insurer_id=patient.insurance_id_fk) }}" class="text-decoration-none fw-bold">
+                    {{ patient.insurance_name }} <i class="bi bi-box-arrow-up-right small"></i>
+                </a>
+            {% else %}
+                {{ patient.insurance_name }}
+            {% endif %}
+            <br>
+            <small class="text-muted">Code: {{ patient.insurance_type }}</small>
+        {% else %}
+            <span class="text-muted">No Insurance</span>
+        {% endif %}
+    </td>
+</tr>
                         <tr>
                             <th>Registration Date:</th>
                             <td>{{ patient.registration_date.strftime('%Y-%m-%d') if patient.registration_date else 'N/A' }}</td>

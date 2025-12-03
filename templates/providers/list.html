@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+{% block title %}Providers{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-person-badge"></i> Providers</h1>
+        <a href="{{ url_for('provider_add') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Provider</a>
+    </div>
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET">
+                <div class="row g-2">
+                    <div class="col-md-12"><input type="text" class="form-control" name="q" placeholder="Search by Name, ID, NPI..." value="{{ search_query or '' }}"></div>
+                    <div class="col-md-4">
+                        <select class="form-select form-select-sm" name="department">
+                            <option value="">All Departments</option>
+                            {% for d in departments %}<option value="{{ d }}" {% if filters.department==d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4"><input type="text" class="form-control form-control-sm" name="specialty" placeholder="Specialty" value="{{ filters.specialty or '' }}"></div>
+                    <div class="col-12 text-end"><button type="submit" class="btn btn-sm btn-primary">Filter</button></div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body p-0">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-dark">
+                    <tr><th>ID</th><th>Name</th><th>Dept</th><th>Specialty</th><th>In-House</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in providers %}
+                    <tr>
+                        <td><small>{{ p.provider_id }}</small></td>
+                        <td><strong>{{ p.name }}</strong></td>
+                        <td>{{ p.department }}</td>
+                        <td>{{ p.specialty }}</td>
+                        <td>{% if p.inhouse %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
+                        <td>
+                            <a href="{{ url_for('provider_view', provider_id=p.provider_id) }}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                            <a href="{{ url_for('provider_edit', provider_id=p.provider_id) }}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                            <form action="{{ url_for('provider_delete', provider_id=p.provider_id) }}" method="POST" style="display:inline;">
+                                <button class="btn btn-sm btn-danger" onclick="return confirm('Delete?')"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

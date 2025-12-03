@@ -4,163 +4,190 @@
 
 {% block content %}
 <div class="container-fluid">
-    <h1 class="mb-4">
-        <i class="bi bi-speedometer2"></i> Hospital Dashboard
-    </h1>
+    
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-speedometer2"></i> Hospital Dashboard</h1>
+        <a href="{{ url_for('encounter_add') }}" class="btn btn-sm btn-primary shadow-sm">
+            <i class="bi bi-plus-lg text-white-50"></i> New Encounter
+        </a>
+    </div>
 
-    <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card stat-card border-primary">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body">
-                    <h5 class="card-title text-primary">
-                        <i class="bi bi-people"></i> Total Patients
-                    </h5>
-                    <h2 class="card-text">{{ stats.total_patients or 0 }}</h2>
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Encounters (Total)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_encounters }}</div>
+                        </div>
+                        <div class="col-auto"><i class="bi bi-calendar2-check fa-2x text-gray-300"></i></div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card border-success">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
                 <div class="card-body">
-                    <h5 class="card-title text-success">
-                        <i class="bi bi-clipboard-pulse"></i> Total Encounters
-                    </h5>
-                    <h2 class="card-text">{{ stats.total_encounters or 0 }}</h2>
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Patients</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_patients }}</div>
+                        </div>
+                        <div class="col-auto"><i class="bi bi-people fa-2x text-gray-300"></i></div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card border-info">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
                 <div class="card-body">
-                    <h5 class="card-title text-info">
-                        <i class="bi bi-person-badge"></i> Total Providers
-                    </h5>
-                    <h2 class="card-text">{{ stats.total_providers or 0 }}</h2>
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Providers</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_providers }}</div>
+                        </div>
+                        <div class="col-auto"><i class="bi bi-person-badge fa-2x text-gray-300"></i></div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card border-warning">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
                 <div class="card-body">
-                    <h5 class="card-title text-warning">
-                        <i class="bi bi-cash-stack"></i> Total Billed
-                    </h5>
-                    <h2 class="card-text">${{ "%.2f"|format(stats.total_billed or 0) }}</h2>
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Total Billed</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">${{ "%.2f"|format(stats.total_billed or 0) }}</div>
+                        </div>
+                        <div class="col-auto"><i class="bi bi-currency-dollar fa-2x text-gray-300"></i></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Recent Hospital Activity Table -->
-    <!-- This table displays results from a Complex Join Query involving 5+ tables:
-         encounters, patients, providers, diagnoses, insurers, claims_and_billing -->
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-                <i class="bi bi-activity"></i> Recent Hospital Activity
-                <small class="float-end">Complex Join Query (5+ Tables)</small>
-            </h5>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center bg-light" 
+             data-bs-toggle="collapse" data-bs-target="#dashboardFilter" style="cursor: pointer;">
+            <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-search"></i> Search Activity</h6>
+            <i class="bi bi-chevron-down"></i>
         </div>
-        <div class="card-body">
-            {% if recent_activity %}
+        <div class="collapse {% if filters_active or search_query %}show{% endif %}" id="dashboardFilter">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('home') }}">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" name="q" placeholder="General Search (Patient, Doctor, Diagnosis...)" value="{{ search_query or '' }}">
+                            </div>
+                        </div>
+                        <div class="col-12"><hr class="my-1"></div>
+                        
+                        <div class="col-md-2">
+                            <input type="text" class="form-control form-control-sm" name="encounter_id" placeholder="Encounter ID" value="{{ filters.encounter_id or '' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control form-control-sm" name="patient_name" placeholder="Patient Name" value="{{ filters.patient_name or '' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control form-control-sm" name="provider_name" placeholder="Doctor Name" value="{{ filters.provider_name or '' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" name="department">
+                                <option value="">Department</option>
+                                {% for d in departments %}
+                                <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" class="form-control form-control-sm" name="visit_date" value="{{ filters.visit_date or '' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" name="status">
+                                <option value="">Status</option>
+                                {% for s in status_options %}
+                                <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <input type="hidden" name="sort" value="{{ current_sort }}">
+                        <input type="hidden" name="direction" value="{{ current_direction }}">
+
+                        <div class="col-12 text-end">
+                            <a href="{{ url_for('home') }}" class="btn btn-sm btn-secondary">Reset</a>
+                            <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Recent Hospital Activity</h6>
+        </div>
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
+                <table class="table table-hover table-striped mb-0 align-middle">
+                    <thead class="table-dark small">
                         <tr>
-                            <th>Encounter ID</th>
-                            <th>Visit Date</th>
-                            <th>Patient</th>
-                            <th>Provider</th>
-                            <th>Department</th>
-                            <th>Diagnosis</th>
-                            <th>Insurance</th>
-                            <th>Billed Amount</th>
-                            <th>Status</th>
+                            <th><a href="{{ url_for('home', **dict(request.args, sort='encounter_id', direction='asc' if current_sort != 'encounter_id' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">ID <i class="bi bi-arrow-down-up"></i></a></th>
+                            <th><a href="{{ url_for('home', **dict(request.args, sort='visit_date', direction='asc' if current_sort != 'visit_date' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">Date <i class="bi bi-arrow-down-up"></i></a></th>
+                            <th><a href="{{ url_for('home', **dict(request.args, sort='patient_name', direction='asc' if current_sort != 'patient_name' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">Patient <i class="bi bi-arrow-down-up"></i></a></th>
+                            <th><a href="{{ url_for('home', **dict(request.args, sort='provider_name', direction='asc' if current_sort != 'provider_name' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">Provider <i class="bi bi-arrow-down-up"></i></a></th>
+                            <th><a href="{{ url_for('home', **dict(request.args, sort='department', direction='asc' if current_sort != 'department' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">Dept <i class="bi bi-arrow-down-up"></i></a></th>
+                            <th><a href="{{ url_for('home', **dict(request.args, sort='diagnosis', direction='asc' if current_sort != 'diagnosis' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">Diagnosis <i class="bi bi-arrow-down-up"></i></a></th>
+                            <th><a href="{{ url_for('home', **dict(request.args, sort='insurance', direction='asc' if current_sort != 'insurance' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">Insurance <i class="bi bi-arrow-down-up"></i></a></th>
+                            <th><a href="{{ url_for('home', **dict(request.args, sort='billed_amount', direction='asc' if current_sort != 'billed_amount' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">Billed <i class="bi bi-arrow-down-up"></i></a></th>
+                            <th><a href="{{ url_for('home', **dict(request.args, sort='status', direction='asc' if current_sort != 'status' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">Status <i class="bi bi-arrow-down-up"></i></a></th>
+                            <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for activity in recent_activity %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('encounter_view', encounter_id=activity.encounter_id) }}" class="text-decoration-none">
-                                    <strong>{{ activity.encounter_id }}</strong>
-                                </a>
-                            </td>
-                            <td>{{ activity.visit_date.strftime('%Y-%m-%d') if activity.visit_date else 'N/A' }}</td>
-                            <td>
-                                <strong>{{ activity.patient_first_name }} {{ activity.patient_last_name }}</strong>
-                                <br>
-                                <small class="text-muted">ID: {{ activity.patient_id }}</small>
-                            </td>
-                            <td>
-                                {{ activity.provider_name or 'N/A' }}
-                                {% if activity.provider_specialty %}
-                                <br><small class="text-muted">{{ activity.provider_specialty }}</small>
-                                {% endif %}
-                            </td>
-                            <td>{{ activity.department or 'N/A' }}</td>
-                            <td>
-                                {% if activity.diagnosis_description %}
-                                <strong>{{ activity.diagnosis_code }}</strong>
-                                <br>
-                                <small class="text-muted">{{ activity.diagnosis_description[:50] }}{% if activity.diagnosis_description|length > 50 %}...{% endif %}</small>
-                                {% else %}
-                                <span class="text-muted">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if activity.insurance_name %}
-                                {{ activity.insurance_name }}
-                                <br><small class="text-muted">{{ activity.insurance_code }}</small>
-                                {% else %}
-                                <span class="text-muted">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if activity.billed_amount %}
-                                ${{ "%.2f"|format(activity.billed_amount) }}
-                                {% else %}
-                                <span class="text-muted">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if activity.claim_status %}
-                                <span class="badge bg-{{ 'success' if activity.claim_status == 'Paid' else 'warning' if activity.claim_status == 'Pending' else 'danger' }}">
-                                    {{ activity.claim_status }}
-                                </span>
-                                {% else %}
-                                <span class="badge bg-secondary">{{ activity.encounter_status or 'N/A' }}</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
+                    <tbody class="small">
+                        {% if recent_activity %}
+                            {% for row in recent_activity %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ row.encounter_id }}</span></td>
+                                <td>{{ row.visit_date.strftime('%Y-%m-%d') if row.visit_date else '-' }}</td>
+                                <td>
+                                    <strong>{{ row.patient_first_name }} {{ row.patient_last_name }}</strong>
+                                    <br><span class="text-muted" style="font-size: 0.8em;">{{ row.patient_id }}</span>
+                                </td>
+                                <td>{{ row.provider_name or '-' }}</td>
+                                <td>{{ row.department or '-' }}</td>
+                                <td>
+                                    {% if row.diagnosis_code %}
+                                    <span class="badge bg-info text-dark">{{ row.diagnosis_code }}</span>
+                                    {% else %}-{% endif %}
+                                </td>
+                                <td>{{ row.insurance_name or '-' }}</td>
+                                <td>${{ "%.2f"|format(row.billed_amount) if row.billed_amount else '0.00' }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if row.encounter_status == 'Completed' else 'warning' if row.encounter_status == 'In Progress' else 'danger' }}">
+                                        {{ row.encounter_status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('encounter_view', encounter_id=row.encounter_id) }}" class="btn btn-sm btn-outline-primary py-0 px-1" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="10" class="text-center py-4">No recent activity found matching criteria.</td>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
-            {% else %}
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> No recent activity found.
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Query Information -->
-    <div class="card mt-4">
-        <div class="card-header bg-secondary text-white">
-            <h6 class="mb-0">
-                <i class="bi bi-info-circle"></i> Query Information
-            </h6>
-        </div>
-        <div class="card-body">
-            <p class="mb-0">
-                <strong>Complex Join Query:</strong> This dashboard displays data from a complex join involving 
-                <strong>5+ tables</strong>: <code>encounters</code>, <code>patients</code>, <code>providers</code>, 
-                <code>diagnoses</code>, <code>insurers</code>, and <code>claims_and_billing</code>.
-            </p>
         </div>
     </div>
 </div>
 {% endblock %}
-

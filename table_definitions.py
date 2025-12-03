@@ -4,7 +4,8 @@ CREATE_TABLES_SQL = [
         insurer_id INT PRIMARY KEY,
         code VARCHAR(50) UNIQUE,
         name VARCHAR(255),
-        payer_type VARCHAR(50)
+        payer_type VARCHAR(50),
+        phone VARCHAR(50) DEFAULT NULL
     );
     """,
     """
@@ -157,11 +158,8 @@ CREATE_TABLES_SQL = [
         appeal_status VARCHAR(100) DEFAULT NULL,
         appeal_resolution_date DATE DEFAULT NULL,
         final_outcome VARCHAR(100) DEFAULT NULL,
-        FOREIGN KEY (claim_id) REFERENCES claims_and_billing(claim_id) ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (claim_id) REFERENCES claims_and_billing(claim_id) ON DELETE RESTRICT ON UPDATE CASCADE,
         CONSTRAINT chk_appeal_details CHECK (LOWER(appeal_filed) != 'yes' OR (appeal_status IS NOT NULL AND appeal_resolution_date IS NOT NULL AND final_outcome IS NOT NULL))
     );
     """
 ]
-
-# Placeholder for future triggers. Currently we rely on application-level validation.
-CREATE_TRIGGERS_SQL = []

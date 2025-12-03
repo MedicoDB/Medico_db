@@ -40,9 +40,17 @@
                             </td>
                         </tr>
                         <tr>
-                            <th>Provider:</th>
-                            <td>{{ encounter.provider_name or 'N/A' }}</td>
-                        </tr>
+    <th>Provider:</th>
+    <td>
+        {% if encounter.provider_id %}
+        <a href="{{ url_for('provider_view', provider_id=encounter.provider_id) }}" class="text-decoration-none fw-bold">
+            {{ encounter.provider_name }} <i class="bi bi-box-arrow-up-right small"></i>
+        </a>
+        {% else %}
+        <span class="text-muted">N/A</span>
+        {% endif %}
+    </td>
+</tr>
                         <tr>
                             <th>Visit Date:</th>
                             <td>{{ encounter.visit_date.strftime('%Y-%m-%d') if encounter.visit_date else 'N/A' }}</td>

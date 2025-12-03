@@ -1,0 +1,142 @@
+{% extends "layout.html" %}
+
+{% block title %}Medications List{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-capsule"></i> Medications</h1>
+            <p class="text-muted small mb-0">Manage patient prescriptions.</p>
+        </div>
+        <a href="{{ url_for('medication_add') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Medication
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light py-3" data-bs-toggle="collapse" data-bs-target="#filterCollapse" style="cursor: pointer;">
+            <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-funnel"></i> Search & Filter</h6>
+        </div>
+        <div class="collapse {% if filters_active or search_query %}show{% endif %}" id="filterCollapse">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('medications_list') }}">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" name="q" placeholder="Search by Drug, Patient Name, Doctor..." value="{{ search_query or '' }}">
+                            </div>
+                        </div>
+                        <div class="col-12"><hr class="my-1"></div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" name="drug_name" placeholder="Drug Name" value="{{ filters.drug_name or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" name="encounter_id" placeholder="Encounter ID" value="{{ filters.encounter_id or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="date" class="form-control form-control-sm" name="date_from" value="{{ filters.date_from or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="date" class="form-control form-control-sm" name="date_to" value="{{ filters.date_to or '' }}">
+                        </div>
+                        
+                        <input type="hidden" name="sort" value="{{ current_sort }}">
+                        <input type="hidden" name="direction" value="{{ current_direction }}">
+
+                        <div class="col-12 text-end">
+                            <a href="{{ url_for('medications_list') }}" class="btn btn-sm btn-secondary">Reset</a>
+                            <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th><a href="{{ url_for('medications_list', **dict(request.args, sort='medication_id', direction='asc' if current_sort != 'medication_id' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                                    ID <i class="bi bi-arrow-down-up small"></i>
+                                </a></th>
+                            <th>
+                                <a href="{{ url_for('medications_list', **dict(request.args, sort='drug_name', direction='asc' if current_sort != 'drug_name' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                                    Drug Name <i class="bi bi-arrow-down-up small"></i>
+                                </a>
+                            </th>
+                            <th>Dosage</th>
+                            <th>Patient</th>
+                            <th>
+                                <a href="{{ url_for('medications_list', **dict(request.args, sort='prescribed_date', direction='asc' if current_sort != 'prescribed_date' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                                    Date <i class="bi bi-arrow-down-up small"></i>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="{{ url_for('medications_list', **dict(request.args, sort='cost', direction='asc' if current_sort != 'cost' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                                    Cost <i class="bi bi-arrow-down-up small"></i>
+                                </a>
+                            </th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if medications %}
+                            {% for med in medications %}
+                            <tr>
+                                <td><small class="text-muted">{{ med.medication_id }}</small></td>
+                                <td class="fw-bold">{{ med.drug_name }}</td>
+                                <td>{{ med.dosage }} <small class="text-muted">({{ med.route }})</small></td>
+                                <td>
+                                    {{ med.patient_first_name }} {{ med.patient_last_name }}
+                                    <br><small class="text-muted">Dr. {{ med.prescriber_name }}</small>
+                                </td>
+                                <td>{{ med.prescribed_date }}</td>
+                                <td>${{ "%.2f"|format(med.cost) if med.cost else '0.00' }}</td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('encounter_view', encounter_id=med.encounter_id) }}" class="btn btn-sm btn-info" title="Go to Encounter">
+                                        <i class="bi bi-box-arrow-up-right"></i> Encounter
+                                    </a>
+                                    <a href="{{ url_for('medication_edit', med_id=med.medication_id) }}" class="btn btn-sm btn-warning" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ loop.index }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+
+                                    <div class="modal fade text-start" id="deleteModal{{ loop.index }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-danger text-white">
+                                                    <h5 class="modal-title">Delete Medication?</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to delete <strong>{{ med.drug_name }}</strong>?
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form action="{{ url_for('medication_delete', med_id=med.medication_id) }}" method="POST">
+                                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="7" class="text-center py-4">No medications found.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

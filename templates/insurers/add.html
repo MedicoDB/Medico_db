@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+{% block title %}Add Insurer{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 600px;">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Add New Insurance Company</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Company Code (Unique)</label>
+                    <input type="text" class="form-control" name="code" placeholder="e.g. MEDI-001" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Company Name</label>
+                    <input type="text" class="form-control" name="name" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Payer Type</label>
+                    <select class="form-select" name="payer_type">
+                        <option value="Private">Private</option>
+                        <option value="Public">Public (Government)</option>
+                        <option value="Medicare">Medicare</option>
+                        <option value="Medicaid">Medicaid</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" class="form-control" name="phone" placeholder="e.g. +1-555-0199">
+                </div>
+                <div class="text-end">
+                    <a href="{{ url_for('insurers_list') }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
