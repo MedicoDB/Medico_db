@@ -55,6 +55,7 @@ def register_routes(app):
 
         conn = None
         try:
+            # İstatistikler için kısa bir bağlantı (Basit count sorguları)
             conn = get_db_connection()
             cursor = get_db_cursor(conn)
             stats_query = """
@@ -81,7 +82,9 @@ def register_routes(app):
             flash(f'Error loading dashboard: {str(e)}', 'danger')
             return render_template('home.html', recent_activity=[], stats={})
         finally:
-            if conn and conn.is_connected(): cursor.close(); conn.close()
+            if conn and conn.is_connected():
+                cursor.close()
+                conn.close()
 
     app.add_url_rule('/', 'home', home, methods=['GET'])
     app.add_url_rule('/home', 'home_alt', home, methods=['GET'])

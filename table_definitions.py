@@ -152,7 +152,7 @@ CREATE_TABLES_SQL = [
         denial_id VARCHAR(50) PRIMARY KEY,
         denial_reason_code VARCHAR(50),
         denial_reason_description TEXT,
-        denied_amount DECIMAL(10, 2),
+        denied_amount DECIAMAL(10, 2),
         denial_date DATE,
         appeal_filed VARCHAR(10),
         appeal_status VARCHAR(100) DEFAULT NULL,
