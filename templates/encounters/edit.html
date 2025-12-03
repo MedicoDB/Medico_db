@@ -1,0 +1,76 @@
+{% extends "layout.html" %}
+
+{% block title %}Edit Encounter{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Edit Encounter: {{ encounter.encounter_id }}</h1>
+        <a href="{{ url_for('encounters_list') }}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('encounter_edit', encounter_id=encounter.encounter_id) }}">
+                
+                <h5 class="mb-3 text-primary">Information</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Patient *</label>
+                        <select class="form-select" name="patient_id" required>
+                            {% for p in patients %}
+                            <option value="{{ p.patient_id }}" {% if encounter.patient_id == p.patient_id %}selected{% endif %}>
+                                {{ p.first_name }} {{ p.last_name }} ({{ p.patient_id }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Provider *</label>
+                        <select class="form-select" name="provider_id" required>
+                            {% for pr in providers %}
+                            <option value="{{ pr.provider_id }}" {% if encounter.provider_id == pr.provider_id %}selected{% endif %}>
+                                {{ pr.name }} - {{ pr.specialty }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <h5 class="mb-3 text-primary">Visit Details</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label">Visit Date</label>
+                        <input type="date" class="form-control" name="visit_date" value="{{ encounter.visit_date.strftime('%Y-%m-%d') if encounter.visit_date else '' }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Type</label>
+                        <select class="form-select" name="visit_type">
+                            <option value="Outpatient" {% if encounter.visit_type == 'Outpatient' %}selected{% endif %}>Outpatient</option>
+                            <option value="Inpatient" {% if encounter.visit_type == 'Inpatient' %}selected{% endif %}>Inpatient</option>
+                            <option value="Emergency" {% if encounter.visit_type == 'Emergency' %}selected{% endif %}>Emergency</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="status">
+                            {% for s in status_options %}
+                            <option value="{{ s }}" {% if encounter.status == s %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Reason</label>
+                        <textarea class="form-control" name="reason_for_visit" rows="2">{{ encounter.reason_for_visit or '' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('encounter_view', encounter_id=encounter.encounter_id) }}" class="btn btn-light me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-5">Update Encounter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

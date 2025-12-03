@@ -1,0 +1,210 @@
+{% extends "layout.html" %}
+
+{% block title %}Patients List{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-people-fill"></i> Patient Management</h1>
+            <p class="text-muted small mb-0">View, search, and manage patient records.</p>
+        </div>
+        <a href="{{ url_for('patient_add') }}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Add New Patient
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light py-3" data-bs-toggle="collapse" data-bs-target="#filterCollapse" style="cursor: pointer;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-funnel"></i> Advanced Search & Filter
+                </h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+        </div>
+        <div class="collapse {% if filters_active or search_query %}show{% endif %}" id="filterCollapse">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('patients_list') }}">
+                    <div class="row g-3">
+                        
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold small text-muted">General Search</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" name="q" placeholder="Quick search by ID, Name, or Phone..." value="{{ search_query or '' }}">
+                            </div>
+                        </div>
+
+                        <div class="col-12"><hr class="my-2"></div>
+
+                        <div class="col-md-2">
+                            <label class="form-label small">Patient ID</label>
+                            <input type="text" class="form-control form-control-sm" name="patient_id" value="{{ filters.patient_id or '' }}" placeholder="e.g. PAT-001">
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label small">First Name</label>
+                            <input type="text" class="form-control form-control-sm" name="first_name" value="{{ filters.first_name or '' }}" placeholder="e.g. Elizabeth">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label small">Last Name</label>
+                            <input type="text" class="form-control form-control-sm" name="last_name" value="{{ filters.last_name or '' }}">
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label small">Gender</label>
+                            <select class="form-select form-select-sm" name="gender">
+                                <option value="">All Genders</option>
+                                {% for g in gender_options %}
+                                <option value="{{ g }}" {% if filters.gender == g %}selected{% endif %}>{{ g }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label small">Age</label>
+                            <input type="number" class="form-control form-control-sm" name="age" value="{{ filters.age_exact or '' }}" placeholder="Exact age">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small">Insurance Provider</label>
+                            <select class="form-select form-select-sm" name="insurance_type">
+                                <option value="">All Providers</option>
+                                {% for insurer in insurer_options %}
+                                <option value="{{ insurer.code }}" {% if filters.insurance_type == insurer.code %}selected{% endif %}>
+                                    {{ insurer.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small">Registration From</label>
+                            <input type="date" class="form-control form-control-sm" name="registration_from" value="{{ filters.registration_from or '' }}">
+                        </div>
+
+                         <input type="hidden" name="sort" value="{{ current_sort }}">
+                         <input type="hidden" name="direction" value="{{ current_direction }}">
+
+                        <div class="col-12 text-end mt-3">
+                            <a href="{{ url_for('patients_list') }}" class="btn btn-outline-secondary btn-sm me-2">
+                                <i class="bi bi-arrow-counterclockwise"></i> Reset Filters
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-filter"></i> Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>
+                                <a href="{{ url_for('patients_list', **dict(request.args, sort='patient_id', direction='asc' if current_sort != 'patient_id' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                                    ID <i class="bi bi-arrow-down-up small"></i>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="{{ url_for('patients_list', **dict(request.args, sort='first_name', direction='asc' if current_sort != 'first_name' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                                    Name <i class="bi bi-arrow-down-up small"></i>
+                                </a>
+                            </th>
+                            <th>Age</th>
+                            <th>Gender</th>
+                            <th>Insurance</th>
+                            <th>
+                                <a href="{{ url_for('patients_list', **dict(request.args, sort='registration_date', direction='asc' if current_sort != 'registration_date' or current_direction == 'desc' else 'desc')) }}" class="text-white text-decoration-none">
+                                    Reg. Date <i class="bi bi-arrow-down-up small"></i>
+                                </a>
+                            </th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if patients %}
+                            {% for p in patients %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ p.patient_id }}</span></td>
+                                <td class="fw-bold">{{ p.first_name }} {{ p.last_name }}</td>
+                                <td>{{ p.age }}</td>
+                                <td>
+                                    {% if p.gender == 'Male' %}<i class="bi bi-gender-male text-primary"></i>
+                                    {% elif p.gender == 'Female' %}<i class="bi bi-gender-female text-danger"></i>
+                                    {% else %}<i class="bi bi-gender-ambiguous"></i>{% endif %}
+                                    {{ p.gender }}
+                                </td>
+                                <td>{{ p.insurance_name or '-' }}</td>
+                                <td>{{ p.registration_date }}</td>
+                                <td class="text-end">
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('patient_view', patient_id=p.patient_id) }}" class="btn btn-sm btn-info" title="View Details"><i class="bi bi-eye"></i></a>
+                                        <a href="{{ url_for('patient_edit', patient_id=p.patient_id) }}" class="btn btn-sm btn-warning" title="Edit"><i class="bi bi-pencil"></i></a>
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ loop.index }}" title="Delete"><i class="bi bi-trash"></i></button>
+                                    </div>
+
+                                    <div class="modal fade text-start" id="deleteModal{{ loop.index }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-danger text-white">
+                                                    <h5 class="modal-title">Delete Patient?</h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to delete <strong>{{ p.first_name }} {{ p.last_name }}</strong>?
+                                                    <br><br>
+                                                    <small class="text-muted">This action cannot be undone. Ensure all encounters are removed first.</small>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form action="{{ url_for('patient_delete', patient_id=p.patient_id) }}" method="POST">
+                                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <i class="bi bi-search display-4"></i>
+                                        <p class="mt-3">No patients found matching your filters.</p>
+                                        <a href="{{ url_for('patients_list') }}" class="btn btn-outline-primary btn-sm">Clear Filters</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white py-3">
+            <small class="text-muted">Showing {{ patients|length }} records</small>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "layout.html" %}
+
+{% block title %}Add New Encounter{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Add New Encounter</h1>
+        <a href="{{ url_for('encounters_list') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('encounter_add') }}">
+                
+                <h5 class="mb-3 text-primary">1. Patient & Provider (Searchable)</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="patient_id" class="form-label fw-bold">Select Patient *</label>
+                        <select id="select-patient" name="patient_id" placeholder="Type name or ID to search..." required>
+                            <option value="">Select a patient...</option>
+                            {% for p in patients %}
+                            <option value="{{ p.patient_id }}">
+                                {{ p.first_name }} {{ p.last_name }} (ID: {{ p.patient_id }}) - {{ p.age }}yo
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Can't find? <a href="{{ url_for('patient_add') }}">Register new patient</a></div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="provider_id" class="form-label fw-bold">Select Provider *</label>
+                        <select id="select-provider" name="provider_id" placeholder="Type doctor name..." required>
+                            <option value="">Select a provider...</option>
+                            {% for pr in providers %}
+                            <option value="{{ pr.provider_id }}">
+                                {{ pr.name }} ({{ pr.specialty }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <h5 class="mb-3 text-primary">2. Visit Details</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label for="visit_date" class="form-label">Visit Date *</label>
+                        <input type="date" class="form-control" id="visit_date" name="visit_date" required>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="visit_type" class="form-label">Visit Type</label>
+                        <select class="form-select" id="visit_type" name="visit_type">
+                            <option value="Outpatient">Outpatient</option>
+                            <option value="Inpatient">Inpatient</option>
+                            <option value="Emergency">Emergency</option>
+                            <option value="Telehealth">Telehealth</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="department" class="form-label">Department (Auto)</label>
+                        <input type="text" class="form-control bg-light" id="department" name="department" placeholder="Select a doctor first..." readonly tabindex="-1">
+                    </div>
+
+                    <div class="col-md-12">
+                        <label for="reason_for_visit" class="form-label">Reason for Visit</label>
+                        <textarea class="form-control" id="reason_for_visit" name="reason_for_visit" rows="2" placeholder="e.g. Chest pain, Follow-up..."></textarea>
+                    </div>
+                </div>
+
+                <h5 class="mb-3 text-primary">3. Clinical & Status</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label for="diagnosis_code" class="form-label">Diagnosis Code (ICD)</label>
+                        <input type="text" class="form-control" id="diagnosis_code" name="diagnosis_code" placeholder="e.g. I10">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            {% for s in status_options %}
+                            <option value="{{ s }}">{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="admission_type" class="form-label">Admission Type</label>
+                        <select class="form-select" id="admission_type" name="admission_type">
+                            <option value="">None</option>
+                            <option value="Elective">Elective</option>
+                            <option value="Emergency">Emergency</option>
+                            <option value="Urgent">Urgent</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label for="discharge_date" class="form-label">Discharge Date</label>
+                        <input type="date" class="form-control" id="discharge_date" name="discharge_date">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="length_of_stay" class="form-label">Length of Stay (Days)</label>
+                        <input type="number" class="form-control" id="length_of_stay" name="length_of_stay" value="0">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-center">
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" id="readmitted_flag" name="readmitted_flag">
+                            <label class="form-check-label" for="readmitted_flag">
+                                Patient Readmitted?
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="reset" class="btn btn-light me-md-2">Reset</button>
+                    <button type="submit" class="btn btn-primary px-5">
+                        <i class="bi bi-save"></i> Save Encounter
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. Provider -> Department Haritasını oluştur (Python verisini JS objesine çeviriyoruz)
+    const providerDepartments = {
+        {% for pr in providers %}
+            "{{ pr.provider_id }}": "{{ pr.department }}",
+        {% endfor %}
+    };
+
+    // 2. TomSelect for Patient Search
+    new TomSelect("#select-patient", {
+        create: false,
+        sortField: { field: "text", direction: "asc" },
+        placeholder: "Search for a patient..."
+    });
+
+    // 3. TomSelect for Provider Search WITH Logic
+    new TomSelect("#select-provider", {
+        create: false,
+        sortField: { field: "text", direction: "asc" },
+        placeholder: "Search for a doctor...",
+        onChange: function(value) {
+            // Seçilen doktorun ID'sini (value) al, haritadan departmanı bul
+            const deptInput = document.getElementById('department');
+            if (value && providerDepartments[value]) {
+                deptInput.value = providerDepartments[value];
+            } else {
+                deptInput.value = "";
+            }
+        }
+    });
+</script>
+{% endblock %}

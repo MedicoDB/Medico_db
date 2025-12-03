@@ -4,7 +4,8 @@ CREATE_TABLES_SQL = [
         insurer_id INT PRIMARY KEY,
         code VARCHAR(50) UNIQUE,
         name VARCHAR(255),
-        payer_type VARCHAR(50)
+        payer_type VARCHAR(50),
+        phone VARCHAR(50) DEFAULT NULL
     );
     """,
     """
@@ -77,7 +78,7 @@ CREATE_TABLES_SQL = [
         diagnosis_id VARCHAR(50) PRIMARY KEY,
         encounter_id VARCHAR(50),
         diagnosis_code VARCHAR(50),
-        diagnosis_description TEXT DEFAULT 'Not provided',
+        diagnosis_description TEXT,
         primary_flag BOOLEAN DEFAULT 1,
         chronic_flag BOOLEAN,
         FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id) ON DELETE CASCADE ON UPDATE CASCADE
@@ -88,7 +89,7 @@ CREATE_TABLES_SQL = [
         procedure_id VARCHAR(50) PRIMARY KEY,
         encounter_id VARCHAR(50),
         procedure_code VARCHAR(50),
-        procedure_description TEXT DEFAULT 'Not provided',
+        procedure_description TEXT,
         procedure_date DATE,
         provider_id VARCHAR(50),
         procedure_cost DECIMAL(10, 2),
@@ -151,13 +152,13 @@ CREATE_TABLES_SQL = [
         denial_id VARCHAR(50) PRIMARY KEY,
         denial_reason_code VARCHAR(50),
         denial_reason_description TEXT,
-        denied_amount DECIMAL(10, 2),
+        denied_amount DECIAMAL(10, 2),
         denial_date DATE,
         appeal_filed VARCHAR(10),
         appeal_status VARCHAR(100) DEFAULT NULL,
         appeal_resolution_date DATE DEFAULT NULL,
         final_outcome VARCHAR(100) DEFAULT NULL,
-        FOREIGN KEY (claim_id) REFERENCES claims_and_billing(claim_id) ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (claim_id) REFERENCES claims_and_billing(claim_id) ON DELETE RESTRICT ON UPDATE CASCADE,
         CONSTRAINT chk_appeal_details CHECK (LOWER(appeal_filed) != 'yes' OR (appeal_status IS NOT NULL AND appeal_resolution_date IS NOT NULL AND final_outcome IS NOT NULL))
     );
     """
