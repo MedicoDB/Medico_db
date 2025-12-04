@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./HomePage.css";
 import { api } from "../services/api";
+import TopBar from "../components/TopBar";  // ✅ DARK MODE BUTONUNU GETİREN TOPBAR
 
 const HomePage = () => {
   const [stats, setStats] = useState({
@@ -15,7 +16,7 @@ const HomePage = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchValue, setSearchValue] = useState(""); 
+  const [searchValue, setSearchValue] = useState("");
 
   const navigate = useNavigate();
 
@@ -102,15 +103,9 @@ const HomePage = () => {
 
       {/* Main */}
       <main className="hp-main">
-        {/* Top Bar */}
-        <header className="hp-topbar">
-          <div>
-            <h1 className="hp-page-title">Hospital Overview</h1>
-            <p className="hp-page-subtitle">
-              Centralized view of patients, encounters, procedures and medications.
-            </p>
-          </div>
-        </header>
+
+        {/* ⭐️ TOPBAR EKLENDİ — ARTIK DARK MODE BUTONU BURADA GÖZÜKECEK */}
+        <TopBar />
 
         {/* Hero Section */}
         <section className="hp-hero">

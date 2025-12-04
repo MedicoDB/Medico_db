@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import "../pages/HomePage.css";
+import ThemeToggle from "../components/ThemeToggle";
 
 const SharedLayout = ({
   title,
@@ -10,14 +11,14 @@ const SharedLayout = ({
   searchValue = "",
   onSearchChange,
   onAddNew,
-  showSearch = true,   // 🔥 yeni prop: search bar gösterilsin mi?
-  showAddNew = true    // 🔥 istersen Add New butonunu da kapatabilirsin
+  showSearch = true,
+  showAddNew = true
 }) => {
   const location = useLocation();
 
   return (
     <div className="hp-root">
-      
+
       {/* Sidebar */}
       <aside className="hp-sidebar">
         <div className="hp-logo">
@@ -41,8 +42,7 @@ const SharedLayout = ({
           <Link to="/patients">
             <button
               className={`hp-nav-item ${
-                activePage === "patients" ||
-                location.pathname === "/patients"
+                activePage === "patients" || location.pathname === "/patients"
                   ? "hp-nav-item--active"
                   : ""
               }`}
@@ -54,8 +54,7 @@ const SharedLayout = ({
           <Link to="/encounters">
             <button
               className={`hp-nav-item ${
-                activePage === "encounters" ||
-                location.pathname === "/encounters"
+                activePage === "encounters" || location.pathname === "/encounters"
                   ? "hp-nav-item--active"
                   : ""
               }`}
@@ -67,8 +66,7 @@ const SharedLayout = ({
           <Link to="/procedures">
             <button
               className={`hp-nav-item ${
-                activePage === "procedures" ||
-                location.pathname === "/procedures"
+                activePage === "procedures" || location.pathname === "/procedures"
                   ? "hp-nav-item--active"
                   : ""
               }`}
@@ -80,9 +78,9 @@ const SharedLayout = ({
           <Link to="/medications">
             <button
               className={`hp-nav-item ${
-                activePage === "medications" ||
-                location.pathname === "/medications"
-                  ? "hp-nav-item--active" : ""
+                activePage === "medications" || location.pathname === "/medications"
+                  ? "hp-nav-item--active"
+                  : ""
               }`}
             >
               Medications
@@ -139,7 +137,10 @@ const SharedLayout = ({
 
           <div className="hp-topbar-right">
 
-            {/* 🔍 Search bar artık opsiyonel */}
+            {/* 🌗 Light/Dark Toggle */}
+            <ThemeToggle />
+
+            {/* 🔍 Search */}
             {showSearch && (
               <input
                 className="hp-search"
@@ -149,7 +150,7 @@ const SharedLayout = ({
               />
             )}
 
-            {/* ➕ Add New butonu da opsiyonel */}
+            {/* ➕ Add New */}
             {showAddNew && (
               <button
                 className="hp-primary-btn"
