@@ -5,7 +5,7 @@ NO ORM - All queries use raw SQL with mysql.connector.
 """
 
 from db import get_db_connection, get_db_cursor
-from utils import generate_new_id
+from backend.app.utils import generate_new_id
 from mysql.connector import Error
 
 
