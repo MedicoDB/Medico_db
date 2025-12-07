@@ -298,6 +298,7 @@ const EncountersPage = () => {
           <Link to="/" className="hp-nav-item">Dashboard</Link>
           <Link to="/patients" className="hp-nav-item">Patients</Link>
           <Link to="/encounters" className="hp-nav-item hp-nav-item--active">Encounters</Link>
+          <Link to="/insurers" className="hp-nav-item">Insurers</Link>
         </nav>
       </aside>
 

@@ -25,6 +25,9 @@ const HomePage = () => {
           <Link to="/encounters" className={`hp-nav-item ${location.pathname === '/encounters' ? 'hp-nav-item--active' : ''}`}>
             Encounters
           </Link>
+          <Link to="/insurers" className={`hp-nav-item ${location.pathname === '/insurers' ? 'hp-nav-item--active' : ''}`}>
+            Insurers
+          </Link>
           <button className="hp-nav-item">Procedures</button>
           <button className="hp-nav-item">Medications</button>
 

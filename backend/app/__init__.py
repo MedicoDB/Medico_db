@@ -13,6 +13,9 @@ def create_app():
     from .api.encounters import bp as encounters_bp
     app.register_blueprint(encounters_bp, url_prefix="/api/encounters")
 
+    from .api.insurers import bp as insurers_bp
+    app.register_blueprint(insurers_bp, url_prefix="/api/insurers")
+
     from .api.dashboard import bp as dashboard_bp
     app.register_blueprint(dashboard_bp, url_prefix="/api/dashboard")
 

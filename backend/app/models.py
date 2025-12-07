@@ -581,15 +581,192 @@ class ProvidersModel:
 
 
 class InsurersModel:
+    SORTABLE_COLUMNS = {
+        "insurer_id": "insurer_id",
+        "code": "code",
+        "name": "name",
+        "payer_type": "payer_type"
+    }
+    
     @staticmethod
-    def get_all():
+    def get_all(limit=1000, page=1, search=None, filters=None, sort_by="name", sort_dir="asc"):
+        """
+        Get all insurers with optional search, filters, sorting, and pagination.
+        Uses SQL LIKE for search and filtering.
+        """
         conn = None
         try:
             conn = get_db_connection()
             cursor = get_db_cursor(conn)
-            cursor.execute("SELECT * FROM insurers ORDER BY name")
-            return cursor.fetchall()
-        except Error as e: raise Error(f"Error: {e}")
+            
+            # Build base query for filtering
+            base_query = "SELECT * FROM insurers WHERE 1 = 1"
+            params = []
+            
+            if search:
+                like_term = f"%{search}%"
+                base_query += " AND (insurer_id LIKE %s OR code LIKE %s OR name LIKE %s OR payer_type LIKE %s OR phone LIKE %s)"
+                params.extend([like_term] * 5)
+            
+            filters = filters or {}
+            if filters.get('code'): base_query += " AND code LIKE %s"; params.append(f"%{filters['code']}%")
+            if filters.get('name'): base_query += " AND name LIKE %s"; params.append(f"%{filters['name']}%")
+            if filters.get('payer_type'): base_query += " AND payer_type = %s"; params.append(filters['payer_type'])
+            
+            # Get total count
+            count_query = f"SELECT COUNT(*) as total FROM ({base_query}) as filtered"
+            cursor.execute(count_query, params)
+            total_count = cursor.fetchone()['total']
+            
+            # Apply sorting and pagination
+            sort_column = InsurersModel.SORTABLE_COLUMNS.get(sort_by, "name")
+            sort_direction = "ASC" if str(sort_dir).lower() == "asc" else "DESC"
+            offset = (page - 1) * limit
+            query = f"{base_query} ORDER BY {sort_column} {sort_direction} LIMIT %s OFFSET %s"
+            params.extend([limit, offset])
+            
+            cursor.execute(query, params)
+            insurers = cursor.fetchall()
+            
+            return {
+                'data': insurers,
+                'total': total_count,
+                'page': page,
+                'per_page': limit,
+                'total_pages': (total_count + limit - 1) // limit
+            }
+        except Error as e: raise Error(f"Error fetching insurers: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+    
+    @staticmethod
+    def get_by_id(insurer_id):
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            query = "SELECT * FROM insurers WHERE insurer_id = %s"
+            cursor.execute(query, (insurer_id,))
+            return cursor.fetchone()
+        except Error as e: raise Error(f"Error fetching insurer: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+    
+    @staticmethod
+    def add(insurer_data):
+        """
+        Add a new insurer. Validates required NOT NULL fields.
+        Required fields: code (UNIQUE), name, payer_type
+        """
+        conn = None
+        try:
+            # Validate required NOT NULL fields
+            if not insurer_data.get('code'):
+                raise ValueError("code is required (NOT NULL)")
+            if not insurer_data.get('name'):
+                raise ValueError("name is required (NOT NULL)")
+            if not insurer_data.get('payer_type'):
+                raise ValueError("payer_type is required (NOT NULL)")
+            
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            
+            # Check if code already exists (UNIQUE constraint)
+            cursor.execute("SELECT insurer_id FROM insurers WHERE code = %s", (insurer_data.get('code'),))
+            if cursor.fetchone():
+                raise ValueError(f"Code '{insurer_data.get('code')}' already exists (must be UNIQUE)")
+            
+            query = """INSERT INTO insurers 
+                (code, name, payer_type, phone) 
+                VALUES (%s, %s, %s, %s)"""
+            
+            values = (
+                insurer_data.get('code'),
+                insurer_data.get('name'),
+                insurer_data.get('payer_type'),
+                insurer_data.get('phone')
+            )
+            cursor.execute(query, values)
+            conn.commit()
+            return cursor.lastrowid  # Return the auto-generated insurer_id
+        except ValueError as ve:
+            if conn: conn.rollback()
+            raise ve
+        except Error as e:
+            if conn: conn.rollback()
+            raise Error(f"Error adding insurer: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+    
+    @staticmethod
+    def update(insurer_id, insurer_data):
+        """
+        Update insurer information. Validates required NOT NULL fields if they are being updated.
+        """
+        conn = None
+        try:
+            # Validate required fields if they're being updated
+            if 'code' in insurer_data and not insurer_data.get('code'):
+                raise ValueError("code cannot be empty (NOT NULL)")
+            if 'name' in insurer_data and not insurer_data.get('name'):
+                raise ValueError("name cannot be empty (NOT NULL)")
+            if 'payer_type' in insurer_data and not insurer_data.get('payer_type'):
+                raise ValueError("payer_type cannot be empty (NOT NULL)")
+            
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            
+            # Check if code already exists (if code is being updated)
+            if 'code' in insurer_data:
+                cursor.execute("SELECT insurer_id FROM insurers WHERE code = %s AND insurer_id != %s", 
+                             (insurer_data.get('code'), insurer_id))
+                if cursor.fetchone():
+                    raise ValueError(f"Code '{insurer_data.get('code')}' already exists (must be UNIQUE)")
+            
+            fields, values = [], []
+            for key, value in insurer_data.items():
+                if key != 'insurer_id': 
+                    fields.append(f"{key} = %s")
+                    values.append(value)
+            
+            if not fields: 
+                return False
+            
+            values.append(insurer_id)
+            cursor.execute(f"UPDATE insurers SET {', '.join(fields)} WHERE insurer_id = %s", values)
+            conn.commit()
+            return cursor.rowcount > 0
+        except ValueError as ve:
+            if conn: conn.rollback()
+            raise ve
+        except Error as e:
+            if conn: conn.rollback()
+            raise Error(f"Error updating insurer: {e}")
+        finally:
+            if conn and conn.is_connected(): cursor.close(); conn.close()
+    
+    @staticmethod
+    def delete(insurer_id):
+        """
+        Delete an insurer. Checks for foreign key constraints.
+        """
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = get_db_cursor(conn)
+            
+            # Check if insurer is referenced by patients
+            cursor.execute("SELECT COUNT(*) AS cnt FROM patients WHERE insurance_type = (SELECT code FROM insurers WHERE insurer_id = %s)", (insurer_id,))
+            result = cursor.fetchone()
+            if result and result.get('cnt', 0) > 0:
+                raise Error(f"Cannot delete insurer {insurer_id}: It is referenced by patients. Update or remove patient references first.")
+            
+            cursor.execute("DELETE FROM insurers WHERE insurer_id = %s", (insurer_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except Error as e:
+            if conn: conn.rollback()
+            raise Error(f"Error deleting insurer: {e}")
         finally:
             if conn and conn.is_connected(): cursor.close(); conn.close()
 
