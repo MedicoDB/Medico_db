@@ -8,7 +8,7 @@ export const api = {
     return response.json();
   },
 
-  // Patients
+  // Patients CRUD
   getPatients: async (params = {}) => {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page);
@@ -91,7 +91,77 @@ export const api = {
     return response.json();
   },
 
-  // Encounters
+  // Insurers CRUD
+  getInsurersList: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.search) queryParams.append('q', params.search);
+    if (params.sort) queryParams.append('sort', params.sort);
+    if (params.direction) queryParams.append('direction', params.direction);
+    if (params.filters) {
+      Object.entries(params.filters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, value);
+        }
+      });
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/insurers/?${queryParams}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch insurers');
+    }
+    return response.json();
+  },
+
+  getInsurerById: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/insurers/${id}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch insurer');
+    }
+    return response.json();
+  },
+
+  createInsurer: async (insurerData) => {
+    const response = await fetch(`${API_BASE_URL}/insurers/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(insurerData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create insurer');
+    }
+    return response.json();
+  },
+
+  updateInsurer: async (id, insurerData) => {
+    const response = await fetch(`${API_BASE_URL}/insurers/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(insurerData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update insurer');
+    }
+    return response.json();
+  },
+
+  deleteInsurer: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/insurers/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete insurer');
+    }
+    return response.json();
+  },
+
+  // Encounters CRUD
   getEncounters: async (params = {}) => {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page);

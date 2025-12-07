@@ -13,7 +13,6 @@ const EncounterDetailPage = () => {
   const [formData, setFormData] = useState({});
   const [patients, setPatients] = useState([]);
   const [providers, setProviders] = useState([]);
-  const [departments, setDepartments] = useState([]);
 
   const statusOptions = ["Scheduled", "Completed", "In Progress", "Cancelled", "Discharged"];
   const visitTypeOptions = ["Emergency", "Outpatient", "Inpatient", "Surgery", "Follow-up", "Telehealth"];
@@ -54,14 +53,12 @@ const EncounterDetailPage = () => {
 
   const fetchOptions = async () => {
     try {
-      const [patientsData, providersData, departmentsData] = await Promise.all([
-        api.getPatientsOptions(),
-        api.getProvidersOptions(),
-        api.getDepartmentsOptions(),
+      const [patientsData, providersData] = await Promise.all([
+        api.getPatientsOptions("", 100),
+        api.getProvidersOptions("", 100),
       ]);
       setPatients(patientsData || []);
       setProviders(providersData || []);
-      setDepartments(departmentsData || []);
     } catch (err) {
       console.error("Error fetching options:", err);
     }
@@ -157,6 +154,7 @@ const EncounterDetailPage = () => {
           <Link to="/" className="hp-nav-item">Dashboard</Link>
           <Link to="/patients" className="hp-nav-item">Patients</Link>
           <Link to="/encounters" className="hp-nav-item hp-nav-item--active">Encounters</Link>
+          <Link to="/insurers" className="hp-nav-item">Insurers</Link>
         </nav>
       </aside>
 
