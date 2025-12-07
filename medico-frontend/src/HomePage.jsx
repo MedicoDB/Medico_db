@@ -1,7 +1,10 @@
 import React from "react";
+import { Link, useLocation } from "react-router-dom";
 import "./HomePage.css";
 
 const HomePage = () => {
+  const location = useLocation();
+  
   return (
     <div className="hp-root">
       {/* Sidebar */}
@@ -13,11 +16,15 @@ const HomePage = () => {
 
         <nav className="hp-nav">
           <p className="hp-nav-title">Main</p>
-          <button className="hp-nav-item hp-nav-item--active">
+          <Link to="/" className={`hp-nav-item ${location.pathname === '/' ? 'hp-nav-item--active' : ''}`}>
             Dashboard
-          </button>
-          <button className="hp-nav-item">Patients</button>
-          <button className="hp-nav-item">Encounters</button>
+          </Link>
+          <Link to="/patients" className={`hp-nav-item ${location.pathname === '/patients' ? 'hp-nav-item--active' : ''}`}>
+            Patients
+          </Link>
+          <Link to="/encounters" className={`hp-nav-item ${location.pathname === '/encounters' ? 'hp-nav-item--active' : ''}`}>
+            Encounters
+          </Link>
           <button className="hp-nav-item">Procedures</button>
           <button className="hp-nav-item">Medications</button>
 
@@ -137,7 +144,7 @@ const HomePage = () => {
                 Search and manage patient profiles, demographics and
                 contact information.
               </p>
-              <button className="hp-link-btn">Go to Patients →</button>
+              <Link to="/patients" className="hp-link-btn">Go to Patients →</Link>
             </div>
 
             <div className="hp-card">
@@ -147,7 +154,7 @@ const HomePage = () => {
                 Track visits, admission details, diagnoses and overall
                 patient journey.
               </p>
-              <button className="hp-link-btn">Go to Encounters →</button>
+              <Link to="/encounters" className="hp-link-btn">Go to Encounters →</Link>
             </div>
 
             <div className="hp-card">
