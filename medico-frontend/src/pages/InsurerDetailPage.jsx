@@ -73,9 +73,42 @@ const InsurerDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="hp-root">
-        <div style={{ padding: "60px", textAlign: "center", color: "var(--hp-text-soft)" }}>
-          Loading insurer details...
+      <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+        <div style={{ display: "flex" }}>
+          <div style={{
+            width: "260px",
+            backgroundColor: "var(--hp-bg-card)",
+            borderRight: "1px solid var(--hp-border)",
+            minHeight: "100vh",
+            padding: "24px 0",
+            position: "sticky",
+            top: 0,
+            height: "100vh",
+            overflowY: "auto"
+          }}>
+            <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+              <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+                Medico
+              </h2>
+            </div>
+            <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+              <Link to="/" className="hp-nav-item">Dashboard</Link>
+              <Link to="/patients" className="hp-nav-item">Patients</Link>
+              <Link to="/encounters" className="hp-nav-item">Encounters</Link>
+              <Link to="/insurers" className="hp-nav-item hp-nav-item--active">Insurers</Link>
+              <Link to="/claims" className="hp-nav-item">Claims</Link>
+              <Link to="/denials" className="hp-nav-item">Denials</Link>
+              <Link to="/procedures" className="hp-nav-item">Procedures</Link>
+              <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
+              <Link to="/medications" className="hp-nav-item">Medications</Link>
+              <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
+              <Link to="/providers" className="hp-nav-item">Providers</Link>
+              <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
+            </nav>
+          </div>
+          <main style={{ flex: 1, padding: "60px", textAlign: "center", color: "var(--hp-text-soft)" }}>
+            Loading insurer details...
+          </main>
         </div>
       </div>
     );
@@ -83,49 +116,119 @@ const InsurerDetailPage = () => {
 
   if (error || !insurer) {
     return (
-      <div className="hp-root">
-        <div style={{ padding: "60px", textAlign: "center" }}>
-          <div style={{ color: "#dc3545", marginBottom: "16px" }}>{error || "Insurer not found"}</div>
-          <Link to="/insurers" className="hp-primary-btn" style={{ display: "inline-block", padding: "10px 20px" }}>
-            Back to Insurers
-          </Link>
+      <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+        <div style={{ display: "flex" }}>
+          <div style={{
+            width: "260px",
+            backgroundColor: "var(--hp-bg-card)",
+            borderRight: "1px solid var(--hp-border)",
+            minHeight: "100vh",
+            padding: "24px 0",
+            position: "sticky",
+            top: 0,
+            height: "100vh",
+            overflowY: "auto"
+          }}>
+            <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+              <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+                Medico
+              </h2>
+            </div>
+            <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+              <Link to="/" className="hp-nav-item">Dashboard</Link>
+              <Link to="/patients" className="hp-nav-item">Patients</Link>
+              <Link to="/encounters" className="hp-nav-item">Encounters</Link>
+              <Link to="/insurers" className="hp-nav-item hp-nav-item--active">Insurers</Link>
+              <Link to="/claims" className="hp-nav-item">Claims</Link>
+              <Link to="/denials" className="hp-nav-item">Denials</Link>
+              <Link to="/procedures" className="hp-nav-item">Procedures</Link>
+              <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
+              <Link to="/medications" className="hp-nav-item">Medications</Link>
+              <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
+              <Link to="/providers" className="hp-nav-item">Providers</Link>
+              <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
+            </nav>
+          </div>
+          <main style={{ flex: 1, padding: "60px" }}>
+            <div style={{ 
+              padding: "20px", 
+              backgroundColor: "rgba(220, 53, 69, 0.1)", 
+              color: "#dc3545", 
+              borderRadius: "8px",
+              border: "1px solid rgba(220, 53, 69, 0.3)"
+            }}>
+              {error || "Insurer not found"}
+              <br />
+              <Link to="/insurers" className="hp-primary-btn" style={{ marginTop: "16px", display: "inline-block" }}>
+                Back to Insurers
+              </Link>
+            </div>
+          </main>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="hp-root">
-      <aside className="hp-sidebar">
-        <div className="hp-logo">
-          <span className="hp-logo-icon">🩺</span>
-          <span className="hp-logo-text">Medico</span>
+    <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+      <div style={{ display: "flex" }}>
+        <div style={{
+          width: "260px",
+          backgroundColor: "var(--hp-bg-card)",
+          borderRight: "1px solid var(--hp-border)",
+          minHeight: "100vh",
+          padding: "24px 0",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          overflowY: "auto"
+        }}>
+          <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+            <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+              Medico
+            </h2>
+          </div>
+          <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+            <Link to="/" className="hp-nav-item">Dashboard</Link>
+            <Link to="/patients" className="hp-nav-item">Patients</Link>
+            <Link to="/encounters" className="hp-nav-item">Encounters</Link>
+            <Link to="/insurers" className="hp-nav-item hp-nav-item--active">Insurers</Link>
+            <Link to="/claims" className="hp-nav-item">Claims</Link>
+            <Link to="/denials" className="hp-nav-item">Denials</Link>
+            <Link to="/procedures" className="hp-nav-item">Procedures</Link>
+            <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
+            <Link to="/medications" className="hp-nav-item">Medications</Link>
+            <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
+            <Link to="/providers" className="hp-nav-item">Providers</Link>
+            <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
+          </nav>
         </div>
-        <nav className="hp-nav">
-          <p className="hp-nav-title">Main</p>
-          <Link to="/" className="hp-nav-item">Dashboard</Link>
-          <Link to="/patients" className="hp-nav-item">Patients</Link>
-          <Link to="/encounters" className="hp-nav-item">Encounters</Link>
-          <Link to="/insurers" className="hp-nav-item hp-nav-item--active">Insurers</Link>
-        </nav>
-      </aside>
 
-      <main className="hp-main">
-        <header className="hp-topbar">
-          <div>
-            <h1 className="hp-page-title">{insurer.name}</h1>
-            <p className="hp-page-subtitle">
-              Insurance company details and information
-            </p>
-          </div>
-          <div className="hp-topbar-actions">
-            <Link to="/insurers" className="hp-secondary-btn" style={{ padding: "10px 20px", textDecoration: "none" }}>
-              ← Back to List
-            </Link>
-          </div>
-        </header>
+        <main style={{ flex: 1 }}>
+          <header style={{
+            backgroundColor: "var(--hp-bg-card)",
+            borderBottom: "1px solid var(--hp-border)",
+            padding: "20px 32px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "600", color: "var(--hp-text-main)" }}>
+                {insurer.name}
+              </h1>
+              <p style={{ margin: "4px 0 0 0", color: "var(--hp-text-soft)", fontSize: "14px" }}>
+                Insurance company details and information
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              <Link to="/insurers" className="hp-secondary-btn">
+                Back to List
+              </Link>
+            </div>
+          </header>
 
-        <div style={{ padding: "24px" }}>
+          <div style={{ padding: "24px" }}>
           {error && (
             <div style={{ padding: "12px", marginBottom: "16px", backgroundColor: "rgba(220, 53, 69, 0.1)", color: "#dc3545", borderRadius: "8px", border: "1px solid rgba(220, 53, 69, 0.3)" }}>
               {error}
@@ -311,8 +414,9 @@ const InsurerDetailPage = () => {
               </>
             )}
           </div>
-        </div>
-      </main>
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

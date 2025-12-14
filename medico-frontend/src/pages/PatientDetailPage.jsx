@@ -14,6 +14,57 @@ const PatientDetailPage = () => {
   const [formData, setFormData] = useState({});
   const [insurers, setInsurers] = useState([]);
 
+  // Helper function to normalize date to YYYY-MM-DD format
+  // Database uses dd/mm/yyyy format in CSV files, but MySQL returns YYYY-MM-DD
+  const normalizeDate = (dateValue) => {
+    if (!dateValue) return "";
+    try {
+      // If it's already in YYYY-MM-DD format (ISO) - this is what MySQL/API returns
+      if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+        return dateValue.split('T')[0].split(' ')[0];
+      }
+      
+      // Handle dd/mm/yyyy format (database CSV format) - priority over mm/dd/yyyy
+      if (typeof dateValue === 'string' && /^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(dateValue)) {
+        const separator = dateValue.includes('/') ? '/' : '-';
+        const parts = dateValue.split(separator);
+        
+        // Determine if it's dd/mm/yyyy or mm/dd/yyyy by checking if first part > 12
+        // If first part > 12, it's likely dd/mm/yyyy (day first)
+        let day, month, year;
+        if (parseInt(parts[0]) > 12 && parseInt(parts[0]) <= 31) {
+          // dd/mm/yyyy format (database format)
+          day = parts[0].padStart(2, '0');
+          month = parts[1].padStart(2, '0');
+          year = parts[2];
+        } else if (parseInt(parts[1]) > 12 && parseInt(parts[1]) <= 31) {
+          // mm/dd/yyyy format
+          month = parts[0].padStart(2, '0');
+          day = parts[1].padStart(2, '0');
+          year = parts[2];
+        } else {
+          // Ambiguous - assume dd/mm/yyyy (database format) if both parts <= 12
+          day = parts[0].padStart(2, '0');
+          month = parts[1].padStart(2, '0');
+          year = parts[2];
+        }
+        return `${year}-${month}-${day}`;
+      }
+      
+      // Try parsing as Date object (handles most formats)
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    } catch (e) {
+      console.error("Error normalizing date:", e);
+    }
+    return "";
+  };
+
   useEffect(() => {
     fetchPatient();
     fetchInsurers();
@@ -25,7 +76,7 @@ const PatientDetailPage = () => {
       setLoading(true);
       const patientData = await api.getPatientById(id);
       setPatient(patientData);
-      const dob = patientData.dob ? patientData.dob.split('T')[0] : "";
+      const dob = normalizeDate(patientData.dob);
       
       setFormData({
         first_name: patientData.first_name || "",
@@ -42,7 +93,7 @@ const PatientDetailPage = () => {
         zip: patientData.zip || "",
         phone: patientData.phone || "",
         email: patientData.email || "",
-        registration_date: patientData.registration_date ? patientData.registration_date.split('T')[0] : "",
+        registration_date: normalizeDate(patientData.registration_date),
       });
       
       // Fetch encounters for this patient
@@ -87,10 +138,18 @@ const PatientDetailPage = () => {
       // Remove age from submit - backend calculates it using SQL TIMESTAMPDIFF
       delete submitData.age;
       
-      // Validate required fields
-      if (!submitData.first_name || !submitData.last_name || !submitData.dob || !submitData.gender) {
-        alert("Please fill in all required fields: First Name, Last Name, Date of Birth, and Gender");
+      // Validate required fields - dob is optional when editing
+      if (!submitData.first_name || !submitData.last_name || !submitData.gender) {
+        alert("Please fill in all required fields: First Name, Last Name, and Gender");
         return;
+      }
+      
+      // When editing, if dob is not provided, keep the original value
+      if (!submitData.dob && patient) {
+        const originalDob = normalizeDate(patient.dob);
+        if (originalDob) {
+          submitData.dob = originalDob;
+        }
       }
       
       await api.updatePatient(id, submitData);
@@ -126,61 +185,155 @@ const PatientDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="hp-root">
-        <main className="hp-main" style={{ padding: "60px", textAlign: "center", color: "var(--hp-text-soft)" }}>
-          Loading patient...
-        </main>
+      <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+        <div style={{ display: "flex" }}>
+          <div style={{
+            width: "260px",
+            backgroundColor: "var(--hp-bg-card)",
+            borderRight: "1px solid var(--hp-border)",
+            minHeight: "100vh",
+            padding: "24px 0",
+            position: "sticky",
+            top: 0,
+            height: "100vh",
+            overflowY: "auto"
+          }}>
+            <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+              <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+                Medico
+              </h2>
+            </div>
+            <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+              <Link to="/" className="hp-nav-item">Dashboard</Link>
+              <Link to="/patients" className="hp-nav-item hp-nav-item--active">Patients</Link>
+              <Link to="/encounters" className="hp-nav-item">Encounters</Link>
+              <Link to="/insurers" className="hp-nav-item">Insurers</Link>
+              <Link to="/claims" className="hp-nav-item">Claims</Link>
+              <Link to="/denials" className="hp-nav-item">Denials</Link>
+              <Link to="/procedures" className="hp-nav-item">Procedures</Link>
+              <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
+              <Link to="/medications" className="hp-nav-item">Medications</Link>
+              <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
+              <Link to="/providers" className="hp-nav-item">Providers</Link>
+              <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
+            </nav>
+          </div>
+          <main style={{ flex: 1, padding: "60px", textAlign: "center", color: "var(--hp-text-soft)" }}>
+            Loading patient...
+          </main>
+        </div>
       </div>
     );
   }
 
   if (error || !patient) {
     return (
-      <div className="hp-root">
-        <main className="hp-main" style={{ padding: "60px" }}>
-          <div style={{ 
-            padding: "20px", 
-            backgroundColor: "rgba(220, 53, 69, 0.1)", 
-            color: "#dc3545", 
-            borderRadius: "8px",
-            border: "1px solid rgba(220, 53, 69, 0.3)"
+      <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+        <div style={{ display: "flex" }}>
+          <div style={{
+            width: "260px",
+            backgroundColor: "var(--hp-bg-card)",
+            borderRight: "1px solid var(--hp-border)",
+            minHeight: "100vh",
+            padding: "24px 0",
+            position: "sticky",
+            top: 0,
+            height: "100vh",
+            overflowY: "auto"
           }}>
-            {error || "Patient not found"}
-            <br />
-            <Link to="/patients" className="hp-primary-btn" style={{ marginTop: "16px", display: "inline-block" }}>
-              Back to Patients
-            </Link>
+            <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+              <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+                Medico
+              </h2>
+            </div>
+            <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+              <Link to="/" className="hp-nav-item">Dashboard</Link>
+              <Link to="/patients" className="hp-nav-item hp-nav-item--active">Patients</Link>
+              <Link to="/encounters" className="hp-nav-item">Encounters</Link>
+              <Link to="/insurers" className="hp-nav-item">Insurers</Link>
+              <Link to="/claims" className="hp-nav-item">Claims</Link>
+              <Link to="/denials" className="hp-nav-item">Denials</Link>
+              <Link to="/procedures" className="hp-nav-item">Procedures</Link>
+              <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
+              <Link to="/medications" className="hp-nav-item">Medications</Link>
+              <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
+              <Link to="/providers" className="hp-nav-item">Providers</Link>
+              <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
+            </nav>
           </div>
-        </main>
+          <main style={{ flex: 1, padding: "60px" }}>
+            <div style={{ 
+              padding: "20px", 
+              backgroundColor: "rgba(220, 53, 69, 0.1)", 
+              color: "#dc3545", 
+              borderRadius: "8px",
+              border: "1px solid rgba(220, 53, 69, 0.3)"
+            }}>
+              {error || "Patient not found"}
+              <br />
+              <Link to="/patients" className="hp-primary-btn" style={{ marginTop: "16px", display: "inline-block" }}>
+                Back to Patients
+              </Link>
+            </div>
+          </main>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="hp-root">
-      <aside className="hp-sidebar">
-        <div className="hp-logo">
-          <span className="hp-logo-icon">🩺</span>
-          <span className="hp-logo-text">Medico</span>
-        </div>
-        <nav className="hp-nav">
-          <p className="hp-nav-title">Main</p>
-          <Link to="/" className="hp-nav-item">Dashboard</Link>
-          <Link to="/patients" className="hp-nav-item hp-nav-item--active">Patients</Link>
-          <Link to="/encounters" className="hp-nav-item">Encounters</Link>
-          <Link to="/insurers" className="hp-nav-item">Insurers</Link>
-        </nav>
-      </aside>
-
-      <main className="hp-main">
-        <header className="hp-topbar">
-          <div>
-            <h1 className="hp-page-title">
-              Patient: {patient.first_name} {patient.last_name}
-            </h1>
-            <p className="hp-page-subtitle">Patient ID: {patient.patient_id}</p>
+    <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+      <div style={{ display: "flex" }}>
+        <div style={{
+          width: "260px",
+          backgroundColor: "var(--hp-bg-card)",
+          borderRight: "1px solid var(--hp-border)",
+          minHeight: "100vh",
+          padding: "24px 0",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          overflowY: "auto"
+        }}>
+          <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+            <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+              Medico
+            </h2>
           </div>
-          <div className="hp-topbar-actions">
+          <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+            <Link to="/" className="hp-nav-item">Dashboard</Link>
+            <Link to="/patients" className="hp-nav-item hp-nav-item--active">Patients</Link>
+            <Link to="/encounters" className="hp-nav-item">Encounters</Link>
+            <Link to="/insurers" className="hp-nav-item">Insurers</Link>
+            <Link to="/claims" className="hp-nav-item">Claims</Link>
+            <Link to="/denials" className="hp-nav-item">Denials</Link>
+            <Link to="/procedures" className="hp-nav-item">Procedures</Link>
+            <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
+            <Link to="/medications" className="hp-nav-item">Medications</Link>
+            <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
+            <Link to="/providers" className="hp-nav-item">Providers</Link>
+            <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
+          </nav>
+        </div>
+
+        <main style={{ flex: 1 }}>
+          <header style={{
+            backgroundColor: "var(--hp-bg-card)",
+            borderBottom: "1px solid var(--hp-border)",
+            padding: "20px 32px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "600", color: "var(--hp-text-main)" }}>
+                Patient: {patient.first_name} {patient.last_name}
+              </h1>
+              <p style={{ margin: "4px 0 0 0", color: "var(--hp-text-soft)", fontSize: "14px" }}>
+                Patient ID: {patient.patient_id}
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
             {!isEditing ? (
               <>
                 <button className="hp-primary-btn" onClick={() => setIsEditing(true)}>
@@ -214,10 +367,10 @@ const PatientDetailPage = () => {
                 </button>
               </>
             )}
-          </div>
-        </header>
+            </div>
+          </header>
 
-        <div style={{ padding: "24px" }}>
+          <div style={{ padding: "24px" }}>
           {isEditing ? (
             <form onSubmit={handleSubmit} style={{ 
               backgroundColor: "var(--hp-bg-card)", 
@@ -254,12 +407,11 @@ const PatientDetailPage = () => {
                 </div>
                 <div>
                   <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "var(--hp-text-main)", fontSize: "14px" }}>
-                    Date of Birth *
+                    Date of Birth
                   </label>
                   <input
                     type="date"
-                    required
-                    value={formData.dob}
+                    value={formData.dob || ""}
                     onChange={(e) => {
                       // Age will be calculated by backend SQL TIMESTAMPDIFF when saving
                       setFormData({ ...formData, dob: e.target.value });
@@ -590,8 +742,9 @@ const PatientDetailPage = () => {
               </div>
             </>
           )}
-        </div>
-      </main>
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

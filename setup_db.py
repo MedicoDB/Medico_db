@@ -38,7 +38,7 @@ def setup_database():
         # Attempt to enable LOAD DATA LOCAL INFILE on the server.
         # NOTE: This command requires SUPER or SYSTEM_VARIABLES_ADMIN privileges.
         cursor.execute('SET GLOBAL local_infile = 1')
-
+        cursor.execute('SET GLOBAL foreign_key_checks = 0')
         print("Creating tables...")
         for statement in CREATE_TABLES_SQL:
             try:
@@ -53,10 +53,10 @@ def setup_database():
         dataset_path = os.path.abspath(os.path.join(script_dir, 'Dataset_renewed'))
 
         csv_files_in_order = [
-            ('insurers', 'insurers.csv', ''),
-            ('specialty_heads', 'specialty_heads.csv', ''),
-            ('patients', 'patients.csv', "(patient_id,first_name,last_name,@dob,age,gender,ethnicity,insurance_type,marital_status,address,city,state,zip,phone,email,@registration_date) SET dob = STR_TO_DATE(@dob, '%d-%m-%Y'), registration_date = STR_TO_DATE(@registration_date, '%d-%m-%Y')"),
-            ('providers', 'providers.csv', "(provider_id,name,department,specialty,npi,@inhouse,location,years_experience,contact_info,email,head_id) SET inhouse = (@inhouse = 'Yes')"),
+            ('insurers', 'insurers.csv', '(insurer_id,code,name,payer_type,phone)'),
+            ('department_heads', 'department_heads.csv', "(head_id,department,head_provider_id,head_name,head_email) set head_email = NULLIF(head_email, '')"),
+            ('patients', 'patients.csv', "(patient_id,first_name,last_name,@dob,age,gender,ethnicity,insurance_type,marital_status,address,city,state,zip,phone,@email,@registration_date) SET dob = STR_TO_DATE(@dob, '%d-%m-%Y'), registration_date = STR_TO_DATE(@registration_date, '%d-%m-%Y'), email = NULLIF(@email, '')"),
+            ('providers', 'providers.csv', "(provider_id,name,department,specialty,npi,@inhouse,location,years_experience,contact_info,@email,head_id) SET inhouse = (@inhouse = 'Yes'), email = NULLIF(@email, '')"),
             ('encounters', 'encounters.csv', "(encounter_id,patient_id,provider_id,@visit_date,visit_type,department,reason_for_visit,diagnosis_code,admission_type,@discharge_date,length_of_stay,status,@readmitted_flag) SET visit_date = STR_TO_DATE(@visit_date, '%d-%m-%Y'), discharge_date = IF(@discharge_date = '', NULL, STR_TO_DATE(@discharge_date, '%d-%m-%Y')), readmitted_flag = (@readmitted_flag = 'Yes')"),
             ('diagnoses', 'diagnoses.csv', "(diagnosis_id,encounter_id,diagnosis_code,diagnosis_description,@primary_flag,@chronic_flag) SET primary_flag = (@primary_flag = 'TRUE'), chronic_flag = (@chronic_flag = 'TRUE')"),
             ('procedures', 'procedures.csv', "(procedure_id,encounter_id,procedure_code,procedure_description,@procedure_date,provider_id,procedure_cost) SET procedure_date = STR_TO_DATE(@procedure_date, '%d-%m-%Y')"),

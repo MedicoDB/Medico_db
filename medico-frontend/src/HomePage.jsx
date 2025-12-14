@@ -1,21 +1,82 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { api } from "./services/api";
 import "./HomePage.css";
 
 const HomePage = () => {
   const location = useLocation();
+  const [stats, setStats] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  // Default to today's date in YYYY-MM-DD format
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [selectedDate]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [statsData, activitiesData] = await Promise.all([
+        api.getDashboardStats(selectedDate),
+        api.getRecentActivities(selectedDate)
+      ]);
+      setStats(statsData);
+      setActivities(activitiesData.activities || []);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      setError(err.message || "Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case 'procedure':
+        return '🧪';
+      case 'medication':
+        return '💊';
+      case 'encounter':
+        return '📋';
+      default:
+        return '📄';
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
   
   return (
-    <div className="hp-root">
+    <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+      <div style={{ display: "flex" }}>
       {/* Sidebar */}
-      <aside className="hp-sidebar">
-        <div className="hp-logo">
-          <span className="hp-logo-icon">🩺</span>
-          <span className="hp-logo-text">Medico</span>
+        <div style={{
+          width: "260px",
+          backgroundColor: "var(--hp-bg-card)",
+          borderRight: "1px solid var(--hp-border)",
+          minHeight: "100vh",
+          padding: "24px 0",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          overflowY: "auto"
+        }}>
+          <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+            <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+              Medico
+            </h2>
         </div>
-
-        <nav className="hp-nav">
-          <p className="hp-nav-title">Main</p>
+          <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
           <Link to="/" className={`hp-nav-item ${location.pathname === '/' ? 'hp-nav-item--active' : ''}`}>
             Dashboard
           </Link>
@@ -25,198 +86,268 @@ const HomePage = () => {
           <Link to="/encounters" className={`hp-nav-item ${location.pathname === '/encounters' ? 'hp-nav-item--active' : ''}`}>
             Encounters
           </Link>
-          <Link to="/insurers" className={`hp-nav-item ${location.pathname === '/insurers' ? 'hp-nav-item--active' : ''}`}>
-            Insurers
-          </Link>
-          <button className="hp-nav-item">Procedures</button>
-          <button className="hp-nav-item">Medications</button>
-
-          <p className="hp-nav-title hp-nav-title--secondary">Analytics</p>
-          <button className="hp-nav-item">Billing & Claims</button>
-          <button className="hp-nav-item">Reports</button>
+            <Link to="/insurers" className={`hp-nav-item ${location.pathname === '/insurers' ? 'hp-nav-item--active' : ''}`}>
+              Insurers
+            </Link>
+            <Link to="/claims" className={`hp-nav-item ${location.pathname === '/claims' ? 'hp-nav-item--active' : ''}`}>
+              Claims
+            </Link>
+            <Link to="/denials" className={`hp-nav-item ${location.pathname === '/denials' ? 'hp-nav-item--active' : ''}`}>
+              Denials
+            </Link>
+            <Link to="/procedures" className={`hp-nav-item ${location.pathname === '/procedures' ? 'hp-nav-item--active' : ''}`}>
+              Procedures
+            </Link>
+            <Link to="/lab-tests" className={`hp-nav-item ${location.pathname === '/lab-tests' ? 'hp-nav-item--active' : ''}`}>
+              Lab Tests
+            </Link>
+            <Link to="/medications" className={`hp-nav-item ${location.pathname === '/medications' ? 'hp-nav-item--active' : ''}`}>
+              Medications
+            </Link>
+            <Link to="/diagnoses" className={`hp-nav-item ${location.pathname === '/diagnoses' ? 'hp-nav-item--active' : ''}`}>
+              Diagnoses
+            </Link>
+            <Link to="/providers" className={`hp-nav-item ${location.pathname === '/providers' ? 'hp-nav-item--active' : ''}`}>
+              Providers
+            </Link>
+            <Link to="/department-heads" className={`hp-nav-item ${location.pathname === '/department-heads' ? 'hp-nav-item--active' : ''}`}>
+              Department Heads
+            </Link>
         </nav>
-
-        <div className="hp-sidebar-footer">
-          <p className="hp-footer-title">Logged in as</p>
-          <p className="hp-footer-name">Furkan İslamoğlu</p>
-          <p className="hp-footer-role">Frontend Lead</p>
         </div>
-      </aside>
 
-      {/* Main */}
-      <main className="hp-main">
-        {/* Top Bar */}
-        <header className="hp-topbar">
-          <div>
-            <h1 className="hp-page-title">Hospital Overview</h1>
-            <p className="hp-page-subtitle">
-              Centralized view of patients, encounters, procedures and
-              medications.
-            </p>
-          </div>
-          <div className="hp-topbar-actions">
-            <input
-              className="hp-search"
-              placeholder="Search patients, encounters..."
-            />
-            <button className="hp-primary-btn">+ New Encounter</button>
-          </div>
+        {/* Main Content */}
+        <div style={{ flex: 1 }}>
+          <header style={{
+            backgroundColor: "var(--hp-bg-card)",
+            borderBottom: "1px solid var(--hp-border)",
+            padding: "20px 32px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "600", color: "var(--hp-text-main)" }}>
+              Dashboard
+            </h1>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <label htmlFor="dashboard-date" style={{ 
+                fontSize: "14px", 
+                fontWeight: "500", 
+                color: "var(--hp-text-main)",
+                marginRight: "8px"
+              }}>
+                Pick a date for Dashboard:
+              </label>
+              <input
+                id="dashboard-date"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  fontSize: "14px",
+                  border: "1px solid var(--hp-border)",
+                  borderRadius: "6px",
+                  backgroundColor: "var(--hp-bg-main)",
+                  color: "var(--hp-text-main)",
+                  cursor: "pointer"
+                }}
+              />
+            </div>
         </header>
 
-        {/* Hero Section */}
-        <section className="hp-hero">
-          <div className="hp-hero-left">
-            <h2 className="hp-hero-title">
-              Smarter Hospital Management with{" "}
-              <span>Medico Platform</span>
-            </h2>
-            <p className="hp-hero-text">
-              Monitor patient journeys from admission to discharge, track
-              procedures & medications, and keep financials aligned –
-              all from a single modern dashboard.
-            </p>
-            <div className="hp-hero-actions">
-              <button className="hp-primary-btn">View Live Dashboard</button>
-              <button className="hp-secondary-btn">Quick Demo Data</button>
+        {error && (
+          <div style={{ 
+            padding: "16px", 
+            margin: "24px", 
+            backgroundColor: "rgba(220, 53, 69, 0.1)", 
+            color: "#dc3545", 
+            borderRadius: "8px", 
+            border: "1px solid rgba(220, 53, 69, 0.3)" 
+          }}>
+            {error}
             </div>
-            <div className="hp-hero-meta">
-              <span>✓ Real hospital dataset</span>
-              <span>✓ Encounter–Procedure–Medication links</span>
-              <span>✓ Ready for analytics & reports</span>
-            </div>
+        )}
+
+        {/* Dashboard Snapshot */}
+        <section className="hp-section">
+          <div className="hp-section-header">
+            <h2>Dashboard Snapshot</h2>
+            <p>Statistics for {new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
           </div>
 
-          <div className="hp-hero-right">
-            <div className="hp-hero-card hp-hero-card--gradient">
-              <p className="hp-hero-card-label">Today’s Snapshot</p>
+          {loading ? (
+            <div style={{ padding: "40px", textAlign: "center", color: "var(--hp-text-soft)" }}>
+              Loading statistics...
+            </div>
+          ) : stats ? (
+            <div className="hp-hero-card hp-hero-card--gradient" style={{ marginTop: "24px" }}>
               <div className="hp-hero-card-grid">
                 <div>
-                  <p className="hp-hero-card-number">128</p>
+                  <p className="hp-hero-card-number">{stats.active_patients || 0}</p>
                   <p className="hp-hero-card-caption">Active Patients</p>
                 </div>
                 <div>
-                  <p className="hp-hero-card-number">63</p>
+                  <p className="hp-hero-card-number">{stats.open_encounters || 0}</p>
                   <p className="hp-hero-card-caption">Open Encounters</p>
                 </div>
                 <div>
-                  <p className="hp-hero-card-number">214</p>
+                  <p className="hp-hero-card-number">{stats.procedures_today || 0}</p>
                   <p className="hp-hero-card-caption">Procedures Today</p>
                 </div>
                 <div>
-                  <p className="hp-hero-card-number">97</p>
+                  <p className="hp-hero-card-number">{stats.medications_issued || 0}</p>
                   <p className="hp-hero-card-caption">Medications Issued</p>
-                </div>
               </div>
             </div>
 
-            <div className="hp-hero-mini-cards">
+              <div className="hp-hero-mini-cards" style={{ marginTop: "24px" }}>
               <div className="hp-mini-card">
                 <p className="hp-mini-label">Average stay</p>
                 <p className="hp-mini-main">
-                  3.1 <span>days</span>
-                </p>
-                <p className="hp-mini-trend hp-mini-trend--up">
-                  ▲ 8% better than last week
+                    {stats.avg_stay || 0} <span>days</span>
                 </p>
               </div>
               <div className="hp-mini-card">
                 <p className="hp-mini-label">Claims approval</p>
                 <p className="hp-mini-main">
-                  92<span>%</span>
-                </p>
-                <p className="hp-mini-trend hp-mini-trend--neutral">
-                  Stable vs last week
+                    {stats.claims_approval_rate || 0}<span>%</span>
                 </p>
               </div>
             </div>
           </div>
+          ) : null}
         </section>
 
-        {/* Quick Access Cards */}
+        {/* Recent Activities */}
         <section className="hp-section">
           <div className="hp-section-header">
-            <h3>Quick access</h3>
-            <p>Jump directly into core modules of the system.</p>
+            <h2>Recent Activities</h2>
+            <p>Latest procedures, medications, and encounters from the past 7 days</p>
           </div>
 
-          <div className="hp-card-grid">
-            <div className="hp-card">
-              <div className="hp-card-icon hp-card-icon--patients">👤</div>
-              <h4>Patients</h4>
-              <p>
-                Search and manage patient profiles, demographics and
-                contact information.
-              </p>
-              <Link to="/patients" className="hp-link-btn">Go to Patients →</Link>
+          {loading ? (
+            <div style={{ padding: "40px", textAlign: "center", color: "var(--hp-text-soft)" }}>
+              Loading activities...
             </div>
-
-            <div className="hp-card">
-              <div className="hp-card-icon hp-card-icon--encounters">📋</div>
-              <h4>Encounters</h4>
-              <p>
-                Track visits, admission details, diagnoses and overall
-                patient journey.
-              </p>
-              <Link to="/encounters" className="hp-link-btn">Go to Encounters →</Link>
-            </div>
-
-            <div className="hp-card">
-              <div className="hp-card-icon hp-card-icon--procedures">🧪</div>
-              <h4>Procedures</h4>
-              <p>
-                View procedures linked to encounters and providers,
-                including costs and codes.
-              </p>
-              <button className="hp-link-btn">Manage Procedures →</button>
-            </div>
-
-            <div className="hp-card">
-              <div className="hp-card-icon hp-card-icon--medications">💊</div>
-              <h4>Medications</h4>
-              <p>
-                Review medication history, prescribed dosages and
-                prescriber information.
-              </p>
-              <button className="hp-link-btn">View Medications →</button>
+          ) : activities.length > 0 ? (
+            <div style={{ 
+              backgroundColor: "var(--hp-bg-card)", 
+              borderRadius: "var(--hp-radius-lg)", 
+              overflow: "hidden",
+              border: "1px solid var(--hp-border)",
+              marginTop: "24px"
+            }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead style={{ backgroundColor: "rgba(148, 163, 184, 0.1)" }}>
+                    <tr>
+                      <th style={{ padding: "16px", textAlign: "left", color: "var(--hp-text-main)", fontWeight: "600", fontSize: "13px", textTransform: "uppercase" }}>
+                        Type
+                      </th>
+                      <th style={{ padding: "16px", textAlign: "left", color: "var(--hp-text-main)", fontWeight: "600", fontSize: "13px", textTransform: "uppercase" }}>
+                        Date
+                      </th>
+                      <th style={{ padding: "16px", textAlign: "left", color: "var(--hp-text-main)", fontWeight: "600", fontSize: "13px", textTransform: "uppercase" }}>
+                        Description
+                      </th>
+                      <th style={{ padding: "16px", textAlign: "left", color: "var(--hp-text-main)", fontWeight: "600", fontSize: "13px", textTransform: "uppercase" }}>
+                        Patient
+                      </th>
+                      <th style={{ padding: "16px", textAlign: "left", color: "var(--hp-text-main)", fontWeight: "600", fontSize: "13px", textTransform: "uppercase" }}>
+                        Provider
+                      </th>
+                      <th style={{ padding: "16px", textAlign: "left", color: "var(--hp-text-main)", fontWeight: "600", fontSize: "13px", textTransform: "uppercase" }}>
+                        Details
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activities.map((activity) => (
+                      <tr key={`${activity.type}-${activity.id}`} style={{ borderTop: "1px solid var(--hp-border)" }}>
+                        <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
+                          <span style={{ fontSize: "20px", marginRight: "8px" }}>
+                            {getActivityIcon(activity.type)}
+                          </span>
+                          <span style={{ textTransform: "capitalize", fontWeight: "500" }}>
+                            {activity.type}
+                          </span>
+                        </td>
+                        <td style={{ padding: "16px", color: "var(--hp-text-soft)" }}>
+                          {formatDate(activity.date)}
+                        </td>
+                        <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
+                          {activity.description}
+                        </td>
+                        <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
+                          <Link 
+                            to={`/patients/${activity.patient_id || ''}`} 
+                            style={{ color: "var(--hp-primary)", textDecoration: "none" }}
+                          >
+                            {activity.patient_name}
+                          </Link>
+                        </td>
+                        <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
+                          {activity.provider_name}
+                        </td>
+                        <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
+                          {activity.type === 'procedure' && activity.cost && (
+                            <span>${parseFloat(activity.cost).toFixed(2)}</span>
+                          )}
+                          {activity.type === 'medication' && activity.frequency && (
+                            <span style={{ fontSize: "12px", color: "var(--hp-text-soft)" }}>
+                              {activity.frequency}
+                            </span>
+                          )}
+                          {activity.type === 'encounter' && activity.status && (
+                            <span style={{ 
+                              padding: "4px 8px", 
+                              borderRadius: "4px", 
+                              backgroundColor: activity.status === 'Completed' ? "rgba(34, 197, 94, 0.1)" : "rgba(251, 191, 36, 0.1)",
+                              color: activity.status === 'Completed' ? "#22c55e" : "#fbbf24",
+                              fontSize: "12px",
+                              fontWeight: "500"
+                            }}>
+                              {activity.status}
+                            </span>
+                          )}
+                          {activity.encounter_id && (
+                            <Link 
+                              to={`/encounters/${activity.encounter_id}`}
+                              style={{ 
+                                marginLeft: "8px",
+                                color: "var(--hp-primary)", 
+                                textDecoration: "none",
+                                fontSize: "12px"
+                              }}
+                            >
+                              View →
+                            </Link>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
             </div>
           </div>
+          ) : (
+            <div style={{ 
+              padding: "40px", 
+              textAlign: "center", 
+              color: "var(--hp-text-soft)",
+              backgroundColor: "var(--hp-bg-card)",
+              borderRadius: "var(--hp-radius-lg)",
+              border: "1px solid var(--hp-border)",
+              marginTop: "24px"
+            }}>
+              No recent activities found
+            </div>
+          )}
         </section>
-
-        {/* Bottom Section */}
-        <section className="hp-section hp-section--split">
-          <div className="hp-section-panel">
-            <h3>Why this matters for the project?</h3>
-            <p>
-              This UI is built around real relations: patient → encounter
-              → procedure / medication, plus billing and denials. It helps
-              you visually validate database design and SQL queries from
-              the backend.
-            </p>
-            <ul className="hp-list">
-              <li>Visual proof of your ERD and foreign keys</li>
-              <li>Easy way to demo queries & reports</li>
-              <li>Clear separation of frontend, backend and database layers</li>
-            </ul>
           </div>
-
-          <div className="hp-section-panel hp-section-panel--bordered">
-            <h3>Next steps for you (Frontend)</h3>
-            <ol className="hp-list hp-list--ordered">
-              <li>Connect this page to real API endpoints.</li>
-              <li>
-                Add real navigation to Procedures & Medications pages
-                you’ll build.
-              </li>
-              <li>
-                Replace static numbers with live stats from encounters,
-                procedures and medications tables.
-              </li>
-            </ol>
           </div>
-        </section>
-      </main>
     </div>
-    
   );
 };
 

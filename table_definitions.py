@@ -1,7 +1,7 @@
 CREATE_TABLES_SQL = [
     """
     CREATE TABLE insurers (
-        insurer_id INT PRIMARY KEY,
+        insurer_id INT PRIMARY KEY auto_increment,
         code VARCHAR(50) UNIQUE NOT NULL,
         name VARCHAR(255) NOT NULL,
         payer_type VARCHAR(50) NOT NULL,
@@ -9,12 +9,13 @@ CREATE_TABLES_SQL = [
     );
     """,
     """
-    CREATE TABLE specialty_heads (
+    CREATE TABLE department_heads (
         head_id INT PRIMARY KEY,
-        specialty VARCHAR(255) NOT NULL,
+        department VARCHAR(255) NOT NULL,
         head_provider_id VARCHAR(50) NOT NULL,
         head_name VARCHAR(255) NOT NULL,
-        head_email VARCHAR(255) UNIQUE DEFAULT NULL
+        head_email VARCHAR(255) UNIQUE DEFAULT NULL,
+        FOREIGN KEY (head_provider_id) REFERENCES providers(provider_id) ON DELETE RESTRICT ON UPDATE CASCADE
     );
     """,
     """
@@ -51,7 +52,7 @@ CREATE_TABLES_SQL = [
         contact_info VARCHAR(50) DEFAULT NULL,
         email VARCHAR(255) UNIQUE DEFAULT NULL,
         head_id INT DEFAULT NULL,
-        FOREIGN KEY (head_id) REFERENCES specialty_heads(head_id) ON DELETE SET NULL ON UPDATE CASCADE
+        FOREIGN KEY (head_id) REFERENCES department_heads(head_id) ON DELETE SET NULL ON UPDATE CASCADE
     );
     """,
     """
@@ -70,7 +71,7 @@ CREATE_TABLES_SQL = [
         status VARCHAR(100) NOT NULL DEFAULT 'Not Completed',
         readmitted_flag BOOLEAN DEFAULT 0,
         FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-        FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE SET NULL ON UPDATE CASCADE
+        FOREIGN KEY (provider_id) REFERENCES providers(provider_id) ON DELETE RESTRICT ON UPDATE CASCADE
     );
     """,
     """
@@ -126,7 +127,7 @@ CREATE_TABLES_SQL = [
         prescriber_id VARCHAR(50) NOT NULL,
         cost DECIMAL(10, 2) DEFAULT 0.00,
         FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id) ON DELETE RESTRICT ON UPDATE CASCADE,
-        FOREIGN KEY (prescriber_id) REFERENCES providers(provider_id) ON DELETE SET NULL ON UPDATE CASCADE
+        FOREIGN KEY (prescriber_id) REFERENCES providers(provider_id) ON DELETE RESTRICT ON UPDATE CASCADE
     );
     """,
     """
@@ -137,11 +138,12 @@ CREATE_TABLES_SQL = [
         insurance_provider VARCHAR(255) DEFAULT NULL,
         payment_method VARCHAR(100) DEFAULT NULL,
         claim_id VARCHAR(50) UNIQUE DEFAULT NULL,
-        claim_billing_date DATETIME NOT NULL,
+        claim_billing_date DATE NOT NULL,
         billed_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
         paid_amount DECIMAL(10, 2) DEFAULT 0.00,
         claim_status VARCHAR(100) NOT NULL,
         denial_reason TEXT DEFAULT NULL,
+        FOREIGN KEY (insurance_provider) REFERENCES insurers(code) ON DELETE SET NULL ON UPDATE CASCADE,
         FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE RESTRICT ON UPDATE CASCADE,
         FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id) ON DELETE RESTRICT ON UPDATE CASCADE
     );

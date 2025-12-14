@@ -164,6 +164,57 @@ const EncountersPage = () => {
     fetchEncounters();
   }, [fetchEncounters]);
 
+  // Helper function to normalize date to YYYY-MM-DD format
+  // Database uses dd/mm/yyyy format in CSV files, but MySQL returns YYYY-MM-DD
+  const normalizeDate = (dateValue) => {
+    if (!dateValue) return "";
+    try {
+      // If it's already in YYYY-MM-DD format (ISO) - this is what MySQL/API returns
+      if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+        return dateValue.split('T')[0].split(' ')[0];
+      }
+      
+      // Handle dd/mm/yyyy format (database CSV format) - priority over mm/dd/yyyy
+      if (typeof dateValue === 'string' && /^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(dateValue)) {
+        const separator = dateValue.includes('/') ? '/' : '-';
+        const parts = dateValue.split(separator);
+        
+        // Determine if it's dd/mm/yyyy or mm/dd/yyyy by checking if first part > 12
+        // If first part > 12, it's likely dd/mm/yyyy (day first)
+        let day, month, year;
+        if (parseInt(parts[0]) > 12 && parseInt(parts[0]) <= 31) {
+          // dd/mm/yyyy format (database format)
+          day = parts[0].padStart(2, '0');
+          month = parts[1].padStart(2, '0');
+          year = parts[2];
+        } else if (parseInt(parts[1]) > 12 && parseInt(parts[1]) <= 31) {
+          // mm/dd/yyyy format
+          month = parts[0].padStart(2, '0');
+          day = parts[1].padStart(2, '0');
+          year = parts[2];
+        } else {
+          // Ambiguous - assume dd/mm/yyyy (database format) if both parts <= 12
+          day = parts[0].padStart(2, '0');
+          month = parts[1].padStart(2, '0');
+          year = parts[2];
+        }
+        return `${year}-${month}-${day}`;
+      }
+      
+      // Try parsing as Date object (handles most formats)
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    } catch (e) {
+      console.error("Error normalizing date:", e);
+    }
+    return "";
+  };
+
   const handleAdd = () => {
     setEditingEncounter(null);
     setFormData({
@@ -181,16 +232,17 @@ const EncountersPage = () => {
 
   const handleEdit = (encounter) => {
     setEditingEncounter(encounter);
+    const normalizedVisitDate = normalizeDate(encounter.visit_date);
     setFormData({
       patient_id: encounter.patient_id || "",
       provider_id: encounter.provider_id || "",
-      visit_date: encounter.visit_date ? encounter.visit_date.split('T')[0] : new Date().toISOString().split('T')[0],
+      visit_date: normalizedVisitDate || new Date().toISOString().split('T')[0],
       visit_type: encounter.visit_type || "",
       department: encounter.department || "",
       reason_for_visit: encounter.reason_for_visit || "",
       diagnosis_code: encounter.diagnosis_code || "",
       admission_type: encounter.admission_type || "",
-      discharge_date: encounter.discharge_date ? encounter.discharge_date.split('T')[0] : "",
+      discharge_date: normalizeDate(encounter.discharge_date),
       length_of_stay: encounter.length_of_stay || 0,
       status: encounter.status || "Scheduled",
       readmitted_flag: encounter.readmitted_flag || false,
@@ -222,6 +274,14 @@ const EncountersPage = () => {
     try {
       const submitData = { ...formData };
       if (!submitData.discharge_date) submitData.discharge_date = null;
+      
+      // When editing, if visit_date is not provided, keep the original value
+      if (editingEncounter && !submitData.visit_date) {
+        const originalVisitDate = normalizeDate(editingEncounter.visit_date);
+        if (originalVisitDate) {
+          submitData.visit_date = originalVisitDate;
+        }
+      }
       
       if (editingEncounter) {
         await api.updateEncounter(editingEncounter.encounter_id, submitData);
@@ -287,51 +347,83 @@ const EncountersPage = () => {
   const hasFilters = Object.values(filters).some(v => v) || searchTerm;
 
   return (
-    <div className="hp-root">
-      <aside className="hp-sidebar">
-        <div className="hp-logo">
-          <span className="hp-logo-icon">🩺</span>
-          <span className="hp-logo-text">Medico</span>
+    <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+      <div style={{ display: "flex" }}>
+        {/* Sidebar */}
+        <div style={{
+          width: "260px",
+          backgroundColor: "var(--hp-bg-card)",
+          borderRight: "1px solid var(--hp-border)",
+          minHeight: "100vh",
+          padding: "24px 0",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          overflowY: "auto"
+        }}>
+          <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+            <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+              Medico
+            </h2>
+          </div>
+          <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+            <Link to="/" className="hp-nav-item">Dashboard</Link>
+            <Link to="/patients" className="hp-nav-item">Patients</Link>
+            <Link to="/encounters" className="hp-nav-item hp-nav-item--active">Encounters</Link>
+            <Link to="/insurers" className="hp-nav-item">Insurers</Link>
+            <Link to="/claims" className="hp-nav-item">Claims</Link>
+            <Link to="/denials" className="hp-nav-item">Denials</Link>
+            <Link to="/procedures" className="hp-nav-item">Procedures</Link>
+            <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
+            <Link to="/medications" className="hp-nav-item">Medications</Link>
+            <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
+            <Link to="/providers" className="hp-nav-item">Providers</Link>
+            <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
+          </nav>
         </div>
-        <nav className="hp-nav">
-          <p className="hp-nav-title">Main</p>
-          <Link to="/" className="hp-nav-item">Dashboard</Link>
-          <Link to="/patients" className="hp-nav-item">Patients</Link>
-          <Link to="/encounters" className="hp-nav-item hp-nav-item--active">Encounters</Link>
-          <Link to="/insurers" className="hp-nav-item">Insurers</Link>
-        </nav>
-      </aside>
 
-      <main className="hp-main">
-        <header className="hp-topbar">
-          <div>
-            <h1 className="hp-page-title">Encounters</h1>
-            <p className="hp-page-subtitle">
-              Track visits, admission details, diagnoses and overall patient journey.
-            </p>
-          </div>
-          <div className="hp-topbar-actions">
-            <input
-              className="hp-search"
-              placeholder="Search encounters..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
-            <button className="hp-primary-btn" onClick={handleAdd}>+ New Encounter</button>
-          </div>
-        </header>
+        {/* Main Content */}
+        <div style={{ flex: 1 }}>
+          <header style={{
+            backgroundColor: "var(--hp-bg-card)",
+            borderBottom: "1px solid var(--hp-border)",
+            padding: "20px 32px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "600", color: "var(--hp-text-main)" }}>
+              Encounters
+            </h1>
+            <button
+              className="hp-primary-btn"
+              onClick={handleAdd}
+              style={{ padding: "12px 24px" }}
+            >
+              + New Encounter
+            </button>
+          </header>
 
-        <div style={{ padding: "24px" }}>
-          {error && (
-            <div style={{ padding: "12px", marginBottom: "16px", backgroundColor: "rgba(220, 53, 69, 0.1)", color: "#dc3545", borderRadius: "8px", border: "1px solid rgba(220, 53, 69, 0.3)" }}>
-              {error}
+          <div style={{ padding: "24px" }}>
+            {error && (
+              <div style={{ padding: "12px", marginBottom: "16px", backgroundColor: "rgba(220, 53, 69, 0.1)", color: "#dc3545", borderRadius: "8px", border: "1px solid rgba(220, 53, 69, 0.3)" }}>
+                {error}
+              </div>
+            )}
+
+            {/* Search Bar */}
+            <div style={{ marginBottom: "20px" }}>
+              <input
+                type="text"
+                className="hp-search"
+                placeholder="Search encounters by ID, patient, provider, department, or status..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: "100%", maxWidth: "600px" }}
+              />
             </div>
-          )}
 
-          {/* Advanced Filters Card */}
+            {/* Advanced Filters Card */}
           <div style={{ 
             backgroundColor: "var(--hp-bg-card)", 
             borderRadius: "var(--hp-radius-lg)", 
@@ -813,10 +905,9 @@ const EncountersPage = () => {
               </div>
             </>
           )}
-        </div>
-      </main>
+          </div>
 
-      {/* Add/Edit Modal */}
+          {/* Add/Edit Modal */}
       {showModal && (
         <div
           style={{
@@ -862,93 +953,106 @@ const EncountersPage = () => {
                       Select Patient *
                     </label>
                     <div style={{ position: "relative" }}>
-                      <input
-                        type="text"
-                        required
-                        value={
-                          formData.patient_id
-                            ? (filteredPatients.find(p => p.patient_id === formData.patient_id) || patients.find(p => p.patient_id === formData.patient_id))
-                              ? `${(filteredPatients.find(p => p.patient_id === formData.patient_id) || patients.find(p => p.patient_id === formData.patient_id)).first_name} ${(filteredPatients.find(p => p.patient_id === formData.patient_id) || patients.find(p => p.patient_id === formData.patient_id)).last_name} (ID: ${formData.patient_id})`
-                              : patientSearchTerm
-                            : patientSearchTerm
-                        }
-                        onChange={(e) => {
-                          setPatientSearchTerm(e.target.value);
-                          setShowPatientDropdown(true);
-                          if (!e.target.value) {
-                            setFormData({ ...formData, patient_id: "" });
-                            setFilteredPatients(patients); // Reset to all patients when search is cleared
-                          }
-                        }}
-                        onFocus={() => {
-                          setShowPatientDropdown(true);
-                          // Load initial patients if not already loaded
-                          if (filteredPatients.length === 0 && !patientSearchTerm) {
-                            setFilteredPatients(patients);
-                          }
-                        }}
-                        onBlur={() => setTimeout(() => setShowPatientDropdown(false), 200)}
-                        placeholder="Search patient by name or ID..."
-                        className="hp-search"
-                        style={{ width: "100%", padding: "10px" }}
-                      />
-                      {showPatientDropdown && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "100%",
-                            left: 0,
-                            right: 0,
-                            zIndex: 1000,
-                            backgroundColor: "var(--hp-bg-card)",
-                            border: "1px solid var(--hp-border)",
-                            borderRadius: "8px",
-                            marginTop: "4px",
-                            maxHeight: "250px",
-                            overflowY: "auto",
-                            boxShadow: "var(--hp-shadow-soft)"
-                          }}
-                        >
-                          {filteredPatients.map((patient) => (
-                              <div
-                                key={patient.patient_id}
-                                onClick={() => {
-                                  setFormData({ ...formData, patient_id: patient.patient_id });
-                                  setPatientSearchTerm(`${patient.first_name} ${patient.last_name} (ID: ${patient.patient_id})`);
-                                  setShowPatientDropdown(false);
-                                }}
-                                style={{
-                                  padding: "10px 14px",
-                                  cursor: "pointer",
-                                  borderBottom: "1px solid var(--hp-border)",
-                                  backgroundColor: formData.patient_id === patient.patient_id ? "rgba(34, 197, 94, 0.1)" : "transparent",
-                                  transition: "background-color 0.2s"
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (formData.patient_id !== patient.patient_id) {
-                                    e.currentTarget.style.backgroundColor = "rgba(148, 163, 184, 0.1)";
-                                  }
-                                }}
-                                onMouseLeave={(e) => {
-                                  if (formData.patient_id !== patient.patient_id) {
-                                    e.currentTarget.style.backgroundColor = "transparent";
-                                  }
-                                }}
-                              >
-                                <div style={{ fontWeight: "500", color: "var(--hp-text-main)", fontSize: "14px" }}>
-                                  {patient.first_name} {patient.last_name}
+                      {editingEncounter ? (
+                        <input
+                          type="text"
+                          value={
+                            formData.patient_id || ""}
+                          readOnly
+                          className="hp-search"
+                          style={{ width: "100%", opacity: 0.7, cursor: "not-allowed", padding: "10px" }}
+                        />
+                      ) : (
+                        <>
+                          <input
+                            type="text"
+                            required
+                            value={
+                              formData.patient_id
+                                ? (filteredPatients.find(p => p.patient_id === formData.patient_id) || patients.find(p => p.patient_id === formData.patient_id))
+                                  ? `${(filteredPatients.find(p => p.patient_id === formData.patient_id) || patients.find(p => p.patient_id === formData.patient_id)).first_name} ${(filteredPatients.find(p => p.patient_id === formData.patient_id) || patients.find(p => p.patient_id === formData.patient_id)).last_name} (ID: ${formData.patient_id})`
+                                  : patientSearchTerm
+                                : patientSearchTerm
+                            }
+                            onChange={(e) => {
+                              setPatientSearchTerm(e.target.value);
+                              setShowPatientDropdown(true);
+                              if (!e.target.value) {
+                                setFormData({ ...formData, patient_id: "" });
+                                setFilteredPatients(patients); // Reset to all patients when search is cleared
+                              }
+                            }}
+                            onFocus={() => {
+                              setShowPatientDropdown(true);
+                              // Load initial patients if not already loaded
+                              if (filteredPatients.length === 0 && !patientSearchTerm) {
+                                setFilteredPatients(patients);
+                              }
+                            }}
+                            onBlur={() => setTimeout(() => setShowPatientDropdown(false), 200)}
+                            placeholder="Search patient by name or ID..."
+                            className="hp-search"
+                            style={{ width: "100%", padding: "10px" }}
+                          />
+                          {showPatientDropdown && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: "100%",
+                                left: 0,
+                                right: 0,
+                                zIndex: 1000,
+                                backgroundColor: "var(--hp-bg-card)",
+                                border: "1px solid var(--hp-border)",
+                                borderRadius: "8px",
+                                marginTop: "4px",
+                                maxHeight: "250px",
+                                overflowY: "auto",
+                                boxShadow: "var(--hp-shadow-soft)"
+                              }}
+                            >
+                              {filteredPatients.map((patient) => (
+                                  <div
+                                    key={patient.patient_id}
+                                    onClick={() => {
+                                      setFormData({ ...formData, patient_id: patient.patient_id });
+                                      setPatientSearchTerm(`${patient.first_name} ${patient.last_name} (ID: ${patient.patient_id})`);
+                                      setShowPatientDropdown(false);
+                                    }}
+                                    style={{
+                                      padding: "10px 14px",
+                                      cursor: "pointer",
+                                      borderBottom: "1px solid var(--hp-border)",
+                                      backgroundColor: formData.patient_id === patient.patient_id ? "rgba(34, 197, 94, 0.1)" : "transparent",
+                                      transition: "background-color 0.2s"
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      if (formData.patient_id !== patient.patient_id) {
+                                        e.currentTarget.style.backgroundColor = "rgba(148, 163, 184, 0.1)";
+                                      }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (formData.patient_id !== patient.patient_id) {
+                                        e.currentTarget.style.backgroundColor = "transparent";
+                                      }
+                                    }}
+                                  >
+                                    <div style={{ fontWeight: "500", color: "var(--hp-text-main)", fontSize: "14px" }}>
+                                      {patient.first_name} {patient.last_name}
+                                    </div>
+                                    <div style={{ fontSize: "12px", color: "var(--hp-text-soft)", marginTop: "2px" }}>
+                                      ID: {patient.patient_id} • Age: {patient.age}yo
+                                    </div>
+                                  </div>
+                                ))}
+                              {filteredPatients.length === 0 && patientSearchTerm && (
+                                <div style={{ padding: "14px", textAlign: "center", color: "var(--hp-text-soft)", fontSize: "13px" }}>
+                                  No patients found
                                 </div>
-                                <div style={{ fontSize: "12px", color: "var(--hp-text-soft)", marginTop: "2px" }}>
-                                  ID: {patient.patient_id} • Age: {patient.age}yo
-                                </div>
-                              </div>
-                            ))}
-                          {filteredPatients.length === 0 && patientSearchTerm && (
-                            <div style={{ padding: "14px", textAlign: "center", color: "var(--hp-text-soft)", fontSize: "13px" }}>
-                              No patients found
+                              )}
                             </div>
                           )}
-                        </div>
+                        </>
                       )}
                     </div>
                   </div>
@@ -963,11 +1067,8 @@ const EncountersPage = () => {
                         type="text"
                         required
                         value={
-                          formData.provider_id
-                            ? (filteredProviders.find(p => p.provider_id === formData.provider_id) || providers.find(p => p.provider_id === formData.provider_id))
-                              ? `${(filteredProviders.find(p => p.provider_id === formData.provider_id) || providers.find(p => p.provider_id === formData.provider_id)).name} (${(filteredProviders.find(p => p.provider_id === formData.provider_id) || providers.find(p => p.provider_id === formData.provider_id)).specialty})`
-                              : providerSearchTerm
-                            : providerSearchTerm
+                          formData.provider_id || ""
+                        
                         }
                         onChange={(e) => {
                           setProviderSearchTerm(e.target.value);
@@ -1059,11 +1160,10 @@ const EncountersPage = () => {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px", marginBottom: "16px" }}>
                   <div>
                     <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "var(--hp-text-main)", fontSize: "14px" }}>
-                      Visit Date *
+                      Visit Date {!editingEncounter && "*"}
                     </label>
                     <input
                       type="date"
-                      required
                       value={formData.visit_date || ""}
                       onChange={(e) => setFormData({ ...formData, visit_date: e.target.value })}
                       className="hp-search"
@@ -1231,6 +1331,8 @@ const EncountersPage = () => {
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 };

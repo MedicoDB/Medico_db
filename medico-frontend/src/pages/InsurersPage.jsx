@@ -162,53 +162,83 @@ const InsurersPage = () => {
   const hasFilters = Object.values(filters).some(v => v) || searchTerm;
 
   return (
-    <div className="hp-root">
-      <aside className="hp-sidebar">
-        <div className="hp-logo">
-          <span className="hp-logo-icon">🩺</span>
-          <span className="hp-logo-text">Medico</span>
-        </div>
-        <nav className="hp-nav">
-          <p className="hp-nav-title">Main</p>
-          <Link to="/" className="hp-nav-item">Dashboard</Link>
-          <Link to="/patients" className="hp-nav-item">Patients</Link>
-          <Link to="/encounters" className="hp-nav-item">Encounters</Link>
-          <Link to="/insurers" className="hp-nav-item hp-nav-item--active">Insurers</Link>
-        </nav>
-      </aside>
-
-      <main className="hp-main">
-        <header className="hp-topbar">
-          <div>
-            <h1 className="hp-page-title">Insurance Companies</h1>
-            <p className="hp-page-subtitle">
-              Manage insurance providers, payer types, and company information.
-            </p>
+    <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+      <div style={{ display: "flex" }}>
+        {/* Sidebar */}
+        <div style={{
+          width: "260px",
+          backgroundColor: "var(--hp-bg-card)",
+          borderRight: "1px solid var(--hp-border)",
+          minHeight: "100vh",
+          padding: "24px 0",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          overflowY: "auto"
+        }}>
+          <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+            <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+              Medico
+            </h2>
           </div>
-          <div className="hp-topbar-actions">
-            <input
-              className="hp-search"
-              placeholder="Search insurers..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
-            <button className="hp-primary-btn" onClick={handleAdd}>
+          <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+            <Link to="/" className="hp-nav-item">Dashboard</Link>
+            <Link to="/patients" className="hp-nav-item">Patients</Link>
+            <Link to="/encounters" className="hp-nav-item">Encounters</Link>
+            <Link to="/insurers" className="hp-nav-item hp-nav-item--active">Insurers</Link>
+            <Link to="/claims" className="hp-nav-item">Claims</Link>
+            <Link to="/denials" className="hp-nav-item">Denials</Link>
+            <Link to="/procedures" className="hp-nav-item">Procedures</Link>
+            <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
+            <Link to="/medications" className="hp-nav-item">Medications</Link>
+            <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
+            <Link to="/providers" className="hp-nav-item">Providers</Link>
+            <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
+          </nav>
+        </div>
+
+        {/* Main Content */}
+        <div style={{ flex: 1 }}>
+          <header style={{
+            backgroundColor: "var(--hp-bg-card)",
+            borderBottom: "1px solid var(--hp-border)",
+            padding: "20px 32px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "600", color: "var(--hp-text-main)" }}>
+              Insurers
+            </h1>
+            <button
+              className="hp-primary-btn"
+              onClick={handleAdd}
+              style={{ padding: "12px 24px" }}
+            >
               + New Insurer
             </button>
-          </div>
-        </header>
+          </header>
 
-        <div style={{ padding: "24px" }}>
-          {error && (
-            <div style={{ padding: "12px", marginBottom: "16px", backgroundColor: "rgba(220, 53, 69, 0.1)", color: "#dc3545", borderRadius: "8px", border: "1px solid rgba(220, 53, 69, 0.3)" }}>
-              {error}
+            <div style={{ padding: "24px" }}>
+            {error && (
+              <div style={{ padding: "12px", marginBottom: "16px", backgroundColor: "rgba(220, 53, 69, 0.1)", color: "#dc3545", borderRadius: "8px", border: "1px solid rgba(220, 53, 69, 0.3)" }}>
+                {error}
+              </div>
+            )}
+
+            {/* Search Bar */}
+            <div style={{ marginBottom: "20px" }}>
+              <input
+                type="text"
+                className="hp-search"
+                placeholder="Search insurers by code, name, or payer type..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: "100%", maxWidth: "600px" }}
+              />
             </div>
-          )}
 
-          {/* Advanced Filters Card */}
+            {/* Advanced Filters Card */}
           <div style={{ 
             backgroundColor: "var(--hp-bg-card)", 
             borderRadius: "var(--hp-radius-lg)", 
@@ -555,26 +585,12 @@ const InsurersPage = () => {
               </div>
             </>
           )}
+        </div> 
         </div>
-      </main>
-
+      </div>
       {/* Add/Edit Modal */}
       {showModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.7)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-          onClick={() => setShowModal(false)}
-        >
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, }} onClick={() => setShowModal(false)}>
           <div
             style={{
               backgroundColor: "var(--hp-bg-card)",

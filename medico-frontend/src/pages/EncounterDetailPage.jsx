@@ -11,15 +11,74 @@ const EncounterDetailPage = () => {
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
-  const [patients, setPatients] = useState([]);
+  const [_patients, setPatients] = useState([]);
   const [providers, setProviders] = useState([]);
+  const [relatedData, setRelatedData] = useState({
+    medications: [],
+    procedures: [],
+    diagnoses: [],
+    lab_tests: [],
+    claims: []
+  });
 
   const statusOptions = ["Scheduled", "Completed", "In Progress", "Cancelled", "Discharged"];
   const visitTypeOptions = ["Emergency", "Outpatient", "Inpatient", "Surgery", "Follow-up", "Telehealth"];
 
+  // Helper function to normalize date to YYYY-MM-DD format
+  // Database uses dd/mm/yyyy format in CSV files, but MySQL returns YYYY-MM-DD
+  const normalizeDate = (dateValue) => {
+    if (!dateValue) return "";
+    try {
+      // If it's already in YYYY-MM-DD format (ISO) - this is what MySQL/API returns
+      if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+        return dateValue.split('T')[0].split(' ')[0];
+      }
+      
+      // Handle dd/mm/yyyy format (database CSV format) - priority over mm/dd/yyyy
+      if (typeof dateValue === 'string' && /^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(dateValue)) {
+        const separator = dateValue.includes('/') ? '/' : '-';
+        const parts = dateValue.split(separator);
+        
+        // Determine if it's dd/mm/yyyy or mm/dd/yyyy by checking if first part > 12
+        // If first part > 12, it's likely dd/mm/yyyy (day first)
+        let day, month, year;
+        if (parseInt(parts[0]) > 12 && parseInt(parts[0]) <= 31) {
+          // dd/mm/yyyy format (database format)
+          day = parts[0].padStart(2, '0');
+          month = parts[1].padStart(2, '0');
+          year = parts[2];
+        } else if (parseInt(parts[1]) > 12 && parseInt(parts[1]) <= 31) {
+          // mm/dd/yyyy format
+          month = parts[0].padStart(2, '0');
+          day = parts[1].padStart(2, '0');
+          year = parts[2];
+        } else {
+          // Ambiguous - assume dd/mm/yyyy (database format) if both parts <= 12
+          day = parts[0].padStart(2, '0');
+          month = parts[1].padStart(2, '0');
+          year = parts[2];
+        }
+        return `${year}-${month}-${day}`;
+      }
+      
+      // Try parsing as Date object (handles most formats)
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    } catch (e) {
+      console.error("Error normalizing date:", e);
+    }
+    return "";
+  };
+
   useEffect(() => {
     fetchEncounter();
     fetchOptions();
+    fetchRelatedData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -28,16 +87,17 @@ const EncounterDetailPage = () => {
       setLoading(true);
       const encounterData = await api.getEncounterById(id);
       setEncounter(encounterData);
+      const normalizedVisitDate = normalizeDate(encounterData.visit_date);
       setFormData({
         patient_id: encounterData.patient_id || "",
         provider_id: encounterData.provider_id || "",
-        visit_date: encounterData.visit_date ? encounterData.visit_date.split('T')[0] : "",
+        visit_date: normalizedVisitDate || "",
         visit_type: encounterData.visit_type || "",
         department: encounterData.department || "",
         reason_for_visit: encounterData.reason_for_visit || "",
         diagnosis_code: encounterData.diagnosis_code || "",
         admission_type: encounterData.admission_type || "",
-        discharge_date: encounterData.discharge_date ? encounterData.discharge_date.split('T')[0] : "",
+        discharge_date: normalizeDate(encounterData.discharge_date),
         length_of_stay: encounterData.length_of_stay || 0,
         status: encounterData.status || "Scheduled",
         readmitted_flag: encounterData.readmitted_flag || false,
@@ -64,6 +124,21 @@ const EncounterDetailPage = () => {
     }
   };
 
+  const fetchRelatedData = async () => {
+    try {
+      const data = await api.getEncounterRelated(id);
+      setRelatedData(data || {
+        medications: [],
+        procedures: [],
+        diagnoses: [],
+        lab_tests: [],
+        claims: []
+      });
+    } catch (err) {
+      console.error("Error fetching related data:", err);
+    }
+  };
+
   const handleProviderChange = (providerId) => {
     const provider = providers.find(p => p.provider_id === providerId);
     setFormData({
@@ -78,6 +153,14 @@ const EncounterDetailPage = () => {
     try {
       const submitData = { ...formData };
       if (!submitData.discharge_date) submitData.discharge_date = null;
+      
+      // When editing, if visit_date is not provided, keep the original value
+      if (!submitData.visit_date && encounter) {
+        const originalVisitDate = normalizeDate(encounter.visit_date);
+        if (originalVisitDate) {
+          submitData.visit_date = originalVisitDate;
+        }
+      }
       
       await api.updateEncounter(id, submitData);
       await fetchEncounter();
@@ -112,72 +195,158 @@ const EncounterDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="hp-root">
-        <main className="hp-main" style={{ padding: "60px", textAlign: "center", color: "var(--hp-text-soft)" }}>
-          Loading encounter...
-        </main>
+      <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+        <div style={{ display: "flex" }}>
+          <div style={{
+            width: "260px",
+            backgroundColor: "var(--hp-bg-card)",
+            borderRight: "1px solid var(--hp-border)",
+            minHeight: "100vh",
+            padding: "24px 0",
+            position: "sticky",
+            top: 0,
+            height: "100vh",
+            overflowY: "auto"
+          }}>
+            <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+              <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+                Medico
+              </h2>
+            </div>
+            <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+              <Link to="/" className="hp-nav-item">Dashboard</Link>
+              <Link to="/patients" className="hp-nav-item">Patients</Link>
+              <Link to="/encounters" className="hp-nav-item hp-nav-item--active">Encounters</Link>
+              <Link to="/insurers" className="hp-nav-item">Insurers</Link>
+              <Link to="/claims" className="hp-nav-item">Claims</Link>
+              <Link to="/denials" className="hp-nav-item">Denials</Link>
+              <Link to="/procedures" className="hp-nav-item">Procedures</Link>
+              <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
+              <Link to="/medications" className="hp-nav-item">Medications</Link>
+              <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
+              <Link to="/providers" className="hp-nav-item">Providers</Link>
+              <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
+            </nav>
+          </div>
+          <main style={{ flex: 1, padding: "60px", textAlign: "center", color: "var(--hp-text-soft)" }}>
+            Loading encounter...
+          </main>
+        </div>
       </div>
     );
   }
 
   if (error || !encounter) {
     return (
-      <div className="hp-root">
-        <main className="hp-main" style={{ padding: "60px" }}>
-          <div style={{ 
-            padding: "20px", 
-            backgroundColor: "rgba(220, 53, 69, 0.1)", 
-            color: "#dc3545", 
-            borderRadius: "8px",
-            border: "1px solid rgba(220, 53, 69, 0.3)"
+      <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+        <div style={{ display: "flex" }}>
+          <div style={{
+            width: "260px",
+            backgroundColor: "var(--hp-bg-card)",
+            borderRight: "1px solid var(--hp-border)",
+            minHeight: "100vh",
+            padding: "24px 0",
+            position: "sticky",
+            top: 0,
+            height: "100vh",
+            overflowY: "auto"
           }}>
-            {error || "Encounter not found"}
-            <br />
-            <Link to="/encounters" className="hp-primary-btn" style={{ marginTop: "16px", display: "inline-block" }}>
-              Back to Encounters
-            </Link>
+            <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+              <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+                Medico
+              </h2>
+            </div>
+            <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+              <Link to="/" className="hp-nav-item">Dashboard</Link>
+              <Link to="/patients" className="hp-nav-item">Patients</Link>
+              <Link to="/encounters" className="hp-nav-item hp-nav-item--active">Encounters</Link>
+              <Link to="/insurers" className="hp-nav-item">Insurers</Link>
+              <Link to="/claims" className="hp-nav-item">Claims</Link>
+              <Link to="/denials" className="hp-nav-item">Denials</Link>
+              <Link to="/procedures" className="hp-nav-item">Procedures</Link>
+              <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
+              <Link to="/medications" className="hp-nav-item">Medications</Link>
+              <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
+              <Link to="/providers" className="hp-nav-item">Providers</Link>
+              <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
+            </nav>
           </div>
-        </main>
+          <main style={{ flex: 1, padding: "60px" }}>
+            <div style={{ 
+              padding: "20px", 
+              backgroundColor: "rgba(220, 53, 69, 0.1)", 
+              color: "#dc3545", 
+              borderRadius: "8px",
+              border: "1px solid rgba(220, 53, 69, 0.3)"
+            }}>
+              {error || "Encounter not found"}
+              <br />
+              <Link to="/encounters" className="hp-primary-btn" style={{ marginTop: "16px", display: "inline-block" }}>
+                Back to Encounters
+              </Link>
+            </div>
+          </main>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="hp-root">
-      <aside className="hp-sidebar">
-        <div className="hp-logo">
-          <span className="hp-logo-icon">🩺</span>
-          <span className="hp-logo-text">Medico</span>
-        </div>
-        <nav className="hp-nav">
-          <p className="hp-nav-title">Main</p>
-          <Link to="/" className="hp-nav-item">Dashboard</Link>
-          <Link to="/patients" className="hp-nav-item">Patients</Link>
-          <Link to="/encounters" className="hp-nav-item hp-nav-item--active">Encounters</Link>
-          <Link to="/insurers" className="hp-nav-item">Insurers</Link>
-        </nav>
-      </aside>
-
-      <main className="hp-main">
-        <header className="hp-topbar">
-          <div>
-            <h1 className="hp-page-title">
-              Encounter: {encounter.encounter_id}
-            </h1>
-            <p className="hp-page-subtitle">
-              {encounter.patient_first_name} {encounter.patient_last_name} - {formatDate(encounter.visit_date)}
-            </p>
+    <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
+      <div style={{ display: "flex" }}>
+        <div style={{
+          width: "260px",
+          backgroundColor: "var(--hp-bg-card)",
+          borderRight: "1px solid var(--hp-border)",
+          minHeight: "100vh",
+          padding: "24px 0",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          overflowY: "auto"
+        }}>
+          <div style={{ padding: "0 20px", marginBottom: "32px" }}>
+            <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
+              Medico
+            </h2>
           </div>
-          <div className="hp-topbar-actions">
+          <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
+            <Link to="/" className="hp-nav-item">Dashboard</Link>
+            <Link to="/patients" className="hp-nav-item">Patients</Link>
+            <Link to="/encounters" className="hp-nav-item hp-nav-item--active">Encounters</Link>
+            <Link to="/insurers" className="hp-nav-item">Insurers</Link>
+            <Link to="/claims" className="hp-nav-item">Claims</Link>
+            <Link to="/denials" className="hp-nav-item">Denials</Link>
+            <Link to="/procedures" className="hp-nav-item">Procedures</Link>
+            <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
+            <Link to="/medications" className="hp-nav-item">Medications</Link>
+            <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
+            <Link to="/providers" className="hp-nav-item">Providers</Link>
+            <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
+          </nav>
+        </div>
+
+        <main style={{ flex: 1 }}>
+          <header style={{
+            backgroundColor: "var(--hp-bg-card)",
+            borderBottom: "1px solid var(--hp-border)",
+            padding: "20px 32px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "600", color: "var(--hp-text-main)" }}>
+                Encounter: {encounter.encounter_id}
+              </h1>
+              <p style={{ margin: "4px 0 0 0", color: "var(--hp-text-soft)", fontSize: "14px" }}>
+                {encounter.patient_first_name} {encounter.patient_last_name} - {formatDate(encounter.visit_date)}
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
             {!isEditing ? (
               <>
-                <Link 
-                  to={`/patients/${encounter.patient_id}`}
-                  className="hp-secondary-btn"
-                >
-                  View Patient
-                </Link>
-                <button className="hp-primary-btn" onClick={() => setIsEditing(true)} style={{ marginLeft: "12px" }}>
+                <button className="hp-primary-btn" onClick={() => setIsEditing(true)}>
                   Edit Encounter
                 </button>
                 <button
@@ -208,10 +377,10 @@ const EncounterDetailPage = () => {
                 </button>
               </>
             )}
-          </div>
-        </header>
+            </div>
+          </header>
 
-        <div style={{ padding: "24px" }}>
+          <div style={{ padding: "24px" }}>
           {isEditing ? (
             <form onSubmit={handleSubmit} style={{ 
               backgroundColor: "var(--hp-bg-card)", 
@@ -226,22 +395,15 @@ const EncounterDetailPage = () => {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                   <div>
                     <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "var(--hp-text-main)", fontSize: "14px" }}>
-                      Select Patient *
+                      Patient
                     </label>
-                    <select
-                      required
-                      value={formData.patient_id || ""}
-                      onChange={(e) => setFormData({ ...formData, patient_id: e.target.value })}
+                    <input
+                      type="text"
+                      value={encounter.patient_first_name + " " + encounter.patient_last_name + " (" + encounter.patient_id + ")"}
+                      readOnly
                       className="hp-search"
-                      style={{ width: "100%", padding: "10px" }}
-                    >
-                      <option value="">Select a patient...</option>
-                      {patients.map((patient) => (
-                        <option key={patient.patient_id} value={patient.patient_id}>
-                          {patient.first_name} {patient.last_name} (ID: {patient.patient_id}) - {patient.age}yo
-                        </option>
-                      ))}
-                    </select>
+                      style={{ width: "100%", opacity: 0.7, cursor: "not-allowed" }}
+                    />
                   </div>
                   <div>
                     <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "var(--hp-text-main)", fontSize: "14px" }}>
@@ -272,11 +434,10 @@ const EncounterDetailPage = () => {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px", marginBottom: "16px" }}>
                   <div>
                     <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "var(--hp-text-main)", fontSize: "14px" }}>
-                      Visit Date *
+                      Visit Date
                     </label>
                     <input
                       type="date"
-                      required
                       value={formData.visit_date || ""}
                       onChange={(e) => setFormData({ ...formData, visit_date: e.target.value })}
                       className="hp-search"
@@ -539,8 +700,280 @@ const EncounterDetailPage = () => {
               </div>
             </div>
           )}
-        </div>
-      </main>
+
+          {/* Related Data Sections */}
+          {!isEditing && (
+            <>
+              {/* Medications */}
+              <div style={{ 
+                backgroundColor: "var(--hp-bg-card)", 
+                borderRadius: "var(--hp-radius-lg)", 
+                padding: "24px",
+                border: "1px solid var(--hp-border)",
+                marginTop: "24px"
+              }}>
+                <h3 style={{ marginTop: 0, marginBottom: "20px", color: "var(--hp-primary)", fontSize: "18px" }}>
+                  Medications
+                </h3>
+                {relatedData.medications.length === 0 ? (
+                  <p style={{ color: "var(--hp-text-soft)" }}>No medications found for this encounter.</p>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid var(--hp-border)" }}>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Drug Name</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Dosage</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Route</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Frequency</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Prescriber</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {relatedData.medications.map((med) => (
+                          <tr key={med.medication_id} style={{ borderTop: "1px solid var(--hp-border)" }}>
+                            <td style={{ padding: "12px", color: "var(--hp-text-main)" }}>{med.drug_name}</td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{med.dosage || "N/A"}</td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{med.route || "N/A"}</td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{med.frequency || "N/A"}</td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{med.prescriber_name || "N/A"}</td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{formatDate(med.prescribed_date)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Procedures */}
+              <div style={{ 
+                backgroundColor: "var(--hp-bg-card)", 
+                borderRadius: "var(--hp-radius-lg)", 
+                padding: "24px",
+                border: "1px solid var(--hp-border)",
+                marginTop: "24px"
+              }}>
+                <h3 style={{ marginTop: 0, marginBottom: "20px", color: "var(--hp-primary)", fontSize: "18px" }}>
+                  Procedures
+                </h3>
+                {relatedData.procedures.length === 0 ? (
+                  <p style={{ color: "var(--hp-text-soft)" }}>No procedures found for this encounter.</p>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid var(--hp-border)" }}>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Procedure Code</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Description</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Provider</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Date</th>
+                          <th style={{ padding: "12px", textAlign: "right", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Cost</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {relatedData.procedures.map((proc) => (
+                          <tr key={proc.procedure_id} style={{ borderTop: "1px solid var(--hp-border)" }}>
+                            <td style={{ padding: "12px", color: "var(--hp-text-main)" }}>{proc.procedure_code}</td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{proc.procedure_description || "N/A"}</td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{proc.provider_name || "N/A"}</td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{formatDate(proc.procedure_date)}</td>
+                            <td style={{ padding: "12px", textAlign: "right", color: "var(--hp-text-main)" }}>${(parseFloat(proc.procedure_cost) || 0).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Diagnoses */}
+              <div style={{ 
+                backgroundColor: "var(--hp-bg-card)", 
+                borderRadius: "var(--hp-radius-lg)", 
+                padding: "24px",
+                border: "1px solid var(--hp-border)",
+                marginTop: "24px"
+              }}>
+                <h3 style={{ marginTop: 0, marginBottom: "20px", color: "var(--hp-primary)", fontSize: "18px" }}>
+                  Diagnoses
+                </h3>
+                {relatedData.diagnoses.length === 0 ? (
+                  <p style={{ color: "var(--hp-text-soft)" }}>No diagnoses found for this encounter.</p>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid var(--hp-border)" }}>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Diagnosis Code</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Description</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Primary</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Chronic</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {relatedData.diagnoses.map((diag) => (
+                          <tr key={diag.diagnosis_id} style={{ borderTop: "1px solid var(--hp-border)" }}>
+                            <td style={{ padding: "12px", color: "var(--hp-text-main)" }}>{diag.diagnosis_code}</td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{diag.diagnosis_description || "N/A"}</td>
+                            <td style={{ padding: "12px" }}>
+                              <span style={{
+                                padding: "4px 10px",
+                                borderRadius: "6px",
+                                fontSize: "12px",
+                                fontWeight: "500",
+                                backgroundColor: diag.primary_flag ? "rgba(34, 197, 94, 0.2)" : "rgba(148, 163, 184, 0.2)",
+                                color: diag.primary_flag ? "#22c55e" : "var(--hp-text-soft)",
+                              }}>
+                                {diag.primary_flag ? "Yes" : "No"}
+                              </span>
+                            </td>
+                            <td style={{ padding: "12px" }}>
+                              <span style={{
+                                padding: "4px 10px",
+                                borderRadius: "6px",
+                                fontSize: "12px",
+                                fontWeight: "500",
+                                backgroundColor: diag.chronic_flag ? "rgba(251, 191, 36, 0.2)" : "rgba(148, 163, 184, 0.2)",
+                                color: diag.chronic_flag ? "#fbbf24" : "var(--hp-text-soft)",
+                              }}>
+                                {diag.chronic_flag ? "Yes" : "No"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Lab Tests */}
+              <div style={{ 
+                backgroundColor: "var(--hp-bg-card)", 
+                borderRadius: "var(--hp-radius-lg)", 
+                padding: "24px",
+                border: "1px solid var(--hp-border)",
+                marginTop: "24px"
+              }}>
+                <h3 style={{ marginTop: 0, marginBottom: "20px", color: "var(--hp-primary)", fontSize: "18px" }}>
+                  Lab Tests
+                </h3>
+                {relatedData.lab_tests.length === 0 ? (
+                  <p style={{ color: "var(--hp-text-soft)" }}>No lab tests found for this encounter.</p>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid var(--hp-border)" }}>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Test Name</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Code</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Result</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Status</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {relatedData.lab_tests.map((test) => (
+                          <tr key={test.test_id} style={{ borderTop: "1px solid var(--hp-border)" }}>
+                            <td style={{ padding: "12px", color: "var(--hp-text-main)" }}>{test.test_name}</td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{test.test_code}</td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{test.test_result || "N/A"}</td>
+                            <td style={{ padding: "12px" }}>
+                              <span style={{
+                                padding: "4px 10px",
+                                borderRadius: "6px",
+                                fontSize: "12px",
+                                fontWeight: "500",
+                                backgroundColor: test.status === "Completed" ? "rgba(34, 197, 94, 0.2)" : "rgba(148, 163, 184, 0.2)",
+                                color: test.status === "Completed" ? "#22c55e" : "var(--hp-text-soft)",
+                              }}>
+                                {test.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>{formatDate(test.test_date)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Claims */}
+              <div style={{ 
+                backgroundColor: "var(--hp-bg-card)", 
+                borderRadius: "var(--hp-radius-lg)", 
+                padding: "24px",
+                border: "1px solid var(--hp-border)",
+                marginTop: "24px"
+              }}>
+                <h3 style={{ marginTop: 0, marginBottom: "20px", color: "var(--hp-primary)", fontSize: "18px" }}>
+                  Claims & Billing
+                </h3>
+                {relatedData.claims.length === 0 ? (
+                  <p style={{ color: "var(--hp-text-soft)" }}>No claims found for this encounter.</p>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid var(--hp-border)" }}>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Billing ID</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Claim Date</th>
+                          <th style={{ padding: "12px", textAlign: "right", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Billed</th>
+                          <th style={{ padding: "12px", textAlign: "right", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Paid</th>
+                          <th style={{ padding: "12px", textAlign: "left", color: "var(--hp-text-soft)", fontWeight: "600", fontSize: "13px" }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {relatedData.claims.map((claim) => (
+                          <tr key={claim.billing_id} style={{ borderTop: "1px solid var(--hp-border)" }}>
+                            <td style={{ padding: "12px" }}>
+                              <Link 
+                                to={`/claims/${claim.billing_id}`}
+                                style={{ 
+                                  color: "var(--hp-primary)", 
+                                  textDecoration: "none",
+                                  fontWeight: "500"
+                                }}
+                              >
+                                {claim.billing_id}
+                              </Link>
+                            </td>
+                            <td style={{ padding: "12px", color: "var(--hp-text-soft)" }}>
+                              {claim.claim_billing_date ? new Date(claim.claim_billing_date).toLocaleDateString() : "N/A"}
+                            </td>
+                            <td style={{ padding: "12px", textAlign: "right", color: "var(--hp-text-main)" }}>${(parseFloat(claim.billed_amount) || 0).toFixed(2)}</td>
+                            <td style={{ padding: "12px", textAlign: "right", color: "var(--hp-text-soft)" }}>${(parseFloat(claim.paid_amount) || 0).toFixed(2)}</td>
+                            <td style={{ padding: "12px" }}>
+                              <span style={{
+                                padding: "4px 10px",
+                                borderRadius: "6px",
+                                fontSize: "12px",
+                                fontWeight: "500",
+                                backgroundColor: claim.claim_status === "Approved" || claim.claim_status === "Paid" ? "rgba(34, 197, 94, 0.2)" : 
+                                                claim.claim_status === "Denied" || claim.claim_status === "Rejected" ? "rgba(239, 68, 68, 0.2)" :
+                                                "rgba(148, 163, 184, 0.2)",
+                                color: claim.claim_status === "Approved" || claim.claim_status === "Paid" ? "#22c55e" :
+                                        claim.claim_status === "Denied" || claim.claim_status === "Rejected" ? "#ef4444" :
+                                        "var(--hp-text-soft)",
+                              }}>
+                                {claim.claim_status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

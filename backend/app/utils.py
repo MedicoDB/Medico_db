@@ -6,8 +6,8 @@ Age calculation is done directly in SQL using TIMESTAMPDIFF, not in Python.
 from mysql.connector import Error
 
 # Whitelist of allowed table and column names for security
-ALLOWED_TABLES = {'patients', 'encounters', 'claims_and_billing', 'medications', 'providers', 'denials'}
-ALLOWED_ID_COLUMNS = {'patient_id', 'encounter_id', 'billing_id', 'medication_id', 'provider_id', 'denial_id'}
+ALLOWED_TABLES = {'patients', 'encounters', 'claims_and_billing', 'medications', 'providers', 'denials', 'procedures', 'diagnoses', 'department_heads', 'lab_tests'}
+ALLOWED_ID_COLUMNS = {'patient_id', 'encounter_id', 'billing_id', 'medication_id', 'provider_id', 'denial_id', 'procedure_id', 'diagnosis_id', 'head_id', 'claim_id', 'test_id'}
 
 def generate_new_id(cursor, table_name, column_name, prefix, padding=6):
     """
