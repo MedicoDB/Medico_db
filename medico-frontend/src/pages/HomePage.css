@@ -179,6 +179,18 @@ body {
   align-items: center;
 }
 
+.hp-topbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hp-topbar-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .hp-search {
   padding: 10px 16px;
   background: var(--hp-bg-card);
@@ -559,7 +571,7 @@ body {
   .hp-hero {
     grid-template-columns: 1fr;
   }
-  
+
   .hp-section--split {
     grid-template-columns: 1fr;
   }
@@ -569,22 +581,21 @@ body {
   .hp-sidebar {
     width: 200px;
   }
-  
+
   .hp-main {
     margin-left: 200px;
     padding: 24px;
   }
-  
+
   .hp-topbar {
     flex-direction: column;
   }
-  
+
   .hp-topbar-actions {
     width: 100%;
   }
-  
+
   .hp-search {
     width: 100%;
   }
 }
-

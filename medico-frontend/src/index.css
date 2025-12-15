@@ -130,3 +130,190 @@ body.light .hp-search {
   color: #1e293b;
   border: 1px solid #d1d5db;
 }
+
+/* Page titles and subtitles */
+body.light .hp-page-title {
+  color: #1e293b;
+}
+
+body.light .hp-page-subtitle {
+  color: #64748b;
+}
+
+/* Hero section */
+body.light .hp-hero-title {
+  color: #1e293b;
+}
+
+body.light .hp-hero-title span {
+  color: #2563eb;
+}
+
+body.light .hp-hero-text {
+  color: #64748b;
+}
+
+body.light .hp-hero-meta span {
+  color: #64748b;
+}
+
+/* Hero cards */
+body.light .hp-hero-card {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+body.light .hp-hero-card--gradient {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-color: #cbd5e1;
+}
+
+body.light .hp-hero-card-label {
+  color: #64748b;
+}
+
+body.light .hp-hero-card-number {
+  color: #1e293b;
+}
+
+body.light .hp-hero-card-caption {
+  color: #64748b;
+}
+
+body.light .hp-mini-card {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+body.light .hp-mini-label {
+  color: #64748b;
+}
+
+body.light .hp-mini-main {
+  color: #1e293b;
+}
+
+body.light .hp-mini-main span {
+  color: #64748b;
+}
+
+/* Cards */
+body.light .hp-card {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+body.light .hp-card h4 {
+  color: #1e293b;
+}
+
+body.light .hp-card p {
+  color: #64748b;
+}
+
+/* Page cards (from Pages.css) */
+body.light .page-card {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+body.light .page-card h3 {
+  color: #1e293b;
+}
+
+body.light .page-card p {
+  color: #64748b;
+}
+
+/* Page sections (fixes Reports page) */
+body.light .page-section {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+body.light .page-section h3 {
+  color: #1e293b;
+}
+
+body.light .page-section p {
+  color: #64748b;
+}
+
+body.light .page-section ul {
+  color: #64748b;
+}
+
+body.light .page-section li {
+  color: #64748b;
+}
+
+/* Tables */
+body.light .page-table th {
+  color: #64748b;
+}
+
+body.light .page-table td {
+  color: #1e293b;
+}
+
+body.light .page-table tr:hover td {
+  background: #f1f5f9;
+}
+
+/* Forms */
+body.light .form-grid label {
+  color: #64748b;
+}
+
+body.light .form-grid input,
+body.light .form-grid select {
+  background: #ffffff;
+  color: #1e293b;
+  border-color: #d1d5db;
+}
+
+/* Logo text */
+body.light .hp-logo-text {
+  color: #1e293b;
+}
+
+/* Navigation titles */
+body.light .hp-nav-title {
+  color: #64748b;
+}
+
+/* Footer text */
+body.light .hp-footer-title {
+  color: #64748b;
+}
+
+body.light .hp-footer-name {
+  color: #1e293b;
+}
+
+body.light .hp-footer-role {
+  color: #64748b;
+}
+
+/* Secondary button */
+body.light .hp-secondary-btn {
+  background: transparent;
+  color: #1e293b;
+  border-color: #d1d5db;
+}
+
+body.light .hp-secondary-btn:hover {
+  background: #f1f5f9;
+  border-color: #2563eb;
+}
+
+/* Topbar layout */
+body.light .hp-topbar-left h1,
+body.light .hp-topbar-left .hp-page-title {
+  color: #1e293b;
+}
+
+body.light .hp-topbar-left p,
+body.light .hp-topbar-left .hp-page-subtitle {
+  color: #64748b;
+}

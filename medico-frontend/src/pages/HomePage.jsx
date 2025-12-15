@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "./HomePage.css";
 import { api } from "../services/api";
 import TopBar from "../components/TopBar";  // ✅ DARK MODE BUTONUNU GETİREN TOPBAR
+import ThemeToggle from "../components/ThemeToggle";  // ✅ Light/Dark mode toggle button
 
 const HomePage = () => {
   const [stats, setStats] = useState({
@@ -104,8 +105,16 @@ const HomePage = () => {
       {/* Main */}
       <main className="hp-main">
 
-        {/* ⭐️ TOPBAR EKLENDİ — ARTIK DARK MODE BUTONU BURADA GÖZÜKECEK */}
-        <TopBar />
+        {/* ⭐️ TOPBAR WITH DARK MODE TOGGLE */}
+        <div className="hp-topbar">
+          <div className="hp-topbar-left">
+            <h1 className="hp-page-title">Dashboard</h1>
+            <p className="hp-page-subtitle">Welcome to Medico Platform overview</p>
+          </div>
+          <div className="hp-topbar-right">
+            <ThemeToggle />
+          </div>
+        </div>
 
         {/* Hero Section */}
         <section className="hp-hero">
@@ -197,7 +206,7 @@ const HomePage = () => {
               style={{ flex: "1", maxWidth: "500px" }}
             />
             <button className="hp-primary-btn" onClick={handleNewEncounter}>
-              + New 
+              + New
             </button>
           </div>
 
