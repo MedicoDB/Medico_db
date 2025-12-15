@@ -174,8 +174,8 @@ const PatientsPage = () => {
           {showAddForm && !editingPatientId
             ? "Close Form"
             : editingPatientId
-            ? "Edit Patient"
-            : "+ New Patient"}
+              ? "Edit Patient"
+              : "+ New Patient"}
         </button>
       </div>
 
@@ -227,16 +227,28 @@ const PatientsPage = () => {
             </label>
             <label>
               Gender
-              <input name="gender" value={newPatient.gender} onChange={handleFormChange} />
+              <select name="gender" value={newPatient.gender} onChange={handleFormChange}>
+                <option value="">-- Select Gender --</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
             </label>
             <label>
               Insurance Type
-              <input
+              <select
                 name="insurance_type"
                 value={newPatient.insurance_type}
                 onChange={handleFormChange}
-                placeholder="e.g. UHC"
-              />
+              >
+                <option value="">-- Select Insurance --</option>
+                <option value="Aetna">Aetna</option>
+                <option value="BCBS">Blue Cross Blue Shield (BCBS)</option>
+                <option value="Cigna">Cigna</option>
+                <option value="Humana">Humana</option>
+                <option value="Medicaid">Medicaid</option>
+                <option value="Medicare">Medicare</option>
+                <option value="UHC">UnitedHealthcare (UHC)</option>
+              </select>
             </label>
             <label>
               Phone
@@ -248,11 +260,24 @@ const PatientsPage = () => {
             </label>
             <label>
               Ethnicity
-              <input name="ethnicity" value={newPatient.ethnicity} onChange={handleFormChange} />
+              <select name="ethnicity" value={newPatient.ethnicity} onChange={handleFormChange}>
+                <option value="">-- Select Ethnicity --</option>
+                <option value="White">White</option>
+                <option value="Hispanic">Hispanic</option>
+                <option value="Asian">Asian</option>
+                <option value="Black">Black / African American</option>
+                <option value="Other">Other</option>
+              </select>
             </label>
             <label>
               Marital Status
-              <input name="marital_status" value={newPatient.marital_status} onChange={handleFormChange} />
+              <select name="marital_status" value={newPatient.marital_status} onChange={handleFormChange}>
+                <option value="">-- Select Status --</option>
+                <option value="Single">Single</option>
+                <option value="Married">Married</option>
+                <option value="Widowed/Divorced/Separated">Widowed / Divorced / Separated</option>
+                <option value="Unknown">Unknown</option>
+              </select>
             </label>
             <label>
               Address
