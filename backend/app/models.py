@@ -1,7 +1,6 @@
 """
-Data Access Objects (DAO) for the Hospital Management System.
-Each class represents a table and contains raw SQL methods for CRUD operations.
-NO ORM - All queries use raw SQL with mysql.connector.
+Hospital Management System data models.
+Each class provides CRUD operations for database tables.
 """
 from .db import get_db_connection, get_db_cursor
 from .utils import generate_new_id
@@ -22,15 +21,17 @@ class PatientsModel:
             conn = get_db_connection()
             cursor = get_db_cursor(conn)
             
-            # Build base query for filtering
+            # Build query with joins and filters
             base_query = "SELECT p.*, i.name AS insurance_name FROM patients p LEFT JOIN insurers i ON p.insurance_type = i.code WHERE 1 = 1"
             params = []
             
+            # Add search conditions
             if search:
                 like_term = f"%{search}%"
                 base_query += " AND (p.patient_id LIKE %s OR p.first_name LIKE %s OR p.last_name LIKE %s OR CONCAT(p.first_name, ' ', p.last_name) LIKE %s OR p.phone LIKE %s OR p.email LIKE %s)"
                 params.extend([like_term] * 6)
             
+            # Apply filters
             filters = filters or {}
             if filters.get('patient_id'): base_query += " AND p.patient_id LIKE %s"; params.append(f"%{filters['patient_id']}%")
             if filters.get('first_name'): base_query += " AND p.first_name LIKE %s"; params.append(f"%{filters['first_name']}%")
@@ -45,7 +46,7 @@ class PatientsModel:
             if filters.get('registration_from'): base_query += " AND p.registration_date >= %s"; params.append(filters['registration_from'])
             if filters.get('registration_to'): base_query += " AND p.registration_date <= %s"; params.append(filters['registration_to'])
             
-            # Get total count
+            # Get total count for pagination
             count_query = f"SELECT COUNT(*) as total FROM ({base_query}) as filtered"
             cursor.execute(count_query, params)
             total_count = cursor.fetchone()['total']

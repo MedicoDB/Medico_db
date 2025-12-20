@@ -1,6 +1,5 @@
 """
-Database connection module using mysql.connector.
-Provides connection handling with error management.
+Database connection utilities.
 """
 import mysql.connector
 from mysql.connector import Error, errorcode
@@ -16,9 +15,7 @@ from settings import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
 
 
 def get_conn():
-    """
-    Create and return a database connection (context manager compatible).
-    """
+    """Create database connection for use with context manager."""
     return mysql.connector.connect(
         host=DB_HOST,
         user=DB_USER,
@@ -30,15 +27,7 @@ def get_conn():
 
 
 def get_db_connection():
-    """
-    Create and return a database connection.
-    
-    Returns:
-        mysql.connector.connection.MySQLConnection: Database connection object
-        
-    Raises:
-        mysql.connector.Error: If connection fails
-    """
+    """Create and return database connection."""
     try:
         conn = mysql.connector.connect(
             host=DB_HOST,
@@ -59,13 +48,5 @@ def get_db_connection():
 
 
 def get_db_cursor(conn):
-    """
-    Get a dictionary cursor from the connection.
-    
-    Args:
-        conn: Database connection object
-        
-    Returns:
-        mysql.connector.cursor.MySQLCursorDict: Dictionary cursor
-    """
+    """Get dictionary cursor from connection."""
     return conn.cursor(dictionary=True, buffered=True)

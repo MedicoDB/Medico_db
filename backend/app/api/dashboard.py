@@ -6,18 +6,18 @@ bp = Blueprint("dashboard", __name__)
 
 @bp.get("/stats")
 def get_dashboard_stats():
-    """Get today's snapshot stats with GROUP BY and aggregate functions."""
+    """Get dashboard statistics for selected date."""
     try:
         with get_conn() as conn:
             with conn.cursor(dictionary=True) as cur:
-                # Get date from query parameter or use today's date
+                # Parse date parameter
                 date_param = request.args.get('date')
                 if date_param:
                     today = date_param
                 else:
                     today = datetime.now().strftime('%Y-%m-%d')
                 
-                # Active Patients: Distinct patients with active encounters (using GROUP BY)
+                # Count active patients with non-completed encounters
                 cur.execute("""
                     SELECT COUNT(DISTINCT patient_id) AS count
                     FROM (
@@ -31,12 +31,12 @@ def get_dashboard_stats():
                 result = cur.fetchone()
                 active_patients = result['count'] if result else 0
 
-                # Open Encounters: COUNT with WHERE filter
+                # Count open encounters
                 cur.execute("SELECT COUNT(*) AS count FROM encounters WHERE status != 'Completed';")
                 result = cur.fetchone()
                 open_encounters = result['count'] if result else 0
 
-                # Procedures Today: GROUP BY procedure_date with COUNT
+                # Count procedures for selected date
                 cur.execute("""
                     SELECT COUNT(*) AS count 
                     FROM procedures 
@@ -46,7 +46,7 @@ def get_dashboard_stats():
                 result = cur.fetchone()
                 procedures_today = result['count'] if result else 0
 
-                # Medications Issued Today: GROUP BY prescribed_date with COUNT
+                # Count medications issued on selected date
                 cur.execute("""
                     SELECT COUNT(*) AS count 
                     FROM medications 
@@ -56,7 +56,7 @@ def get_dashboard_stats():
                 result = cur.fetchone()
                 medications_issued = result['count'] if result else 0
 
-                # Average Stay: AVG aggregate with GROUP BY
+                # Calculate average length of stay
                 cur.execute("""
                     SELECT AVG(length_of_stay) AS avg_stay 
                     FROM encounters 
@@ -69,10 +69,10 @@ def get_dashboard_stats():
                     avg_stay = round(sum(row['avg_stay'] for row in avg_results) / len(avg_results), 1)
                 else:
                     cur.execute("SELECT AVG(length_of_stay) AS avg_stay FROM encounters WHERE length_of_stay IS NOT NULL;")
-                result = cur.fetchone()
-                avg_stay = round(result['avg_stay'], 1) if result and result['avg_stay'] is not None else 0.0
+                    result = cur.fetchone()
+                    avg_stay = round(result['avg_stay'], 1) if result and result['avg_stay'] is not None else 0.0
 
-                # Claims Approval Rate: GROUP BY with CASE and aggregate, filtered by date
+                # Calculate claims approval rate for selected date
                 cur.execute("""
                     SELECT 
                         claim_status,
@@ -106,21 +106,14 @@ def get_dashboard_stats():
 
 @bp.get("/recent-activities")
 def get_recent_activities():
-    """
-    Get recent activities using complex JOIN of 4+ tables with nested queries.
-    Returns recent procedures, medications, encounters with full context.
-    """
+    """Get recent activities from last 7 days."""
     try:
         with get_conn() as conn:
             with conn.cursor(dictionary=True) as cur:
-                # Complex query joining 5+ tables: 
-                # encounters -> patients -> procedures -> providers -> medications
-                # Using nested subquery and LEFT OUTER JOIN
-                # Get date from query parameter or use today's date
+                # Parse date and calculate 7 days ago
                 date_param = request.args.get('date')
                 if date_param:
                     today = date_param
-                    # Calculate seven_days_ago from the selected date
                     today_date = datetime.strptime(today, '%Y-%m-%d')
                     seven_days_ago_date = today_date - timedelta(days=7)
                     seven_days_ago = seven_days_ago_date.strftime('%Y-%m-%d')
@@ -131,7 +124,7 @@ def get_recent_activities():
                 
                 activities = []
                 
-                # Recent Procedures with nested query for provider info
+                # Fetch recent procedures with patient and provider info
                 cur.execute("""
                     SELECT 
                         p.procedure_id,
@@ -173,7 +166,7 @@ def get_recent_activities():
                         "visit_type": row['visit_type']
                     })
                 
-                # Recent Medications with nested query for prescriber and encounter info
+                # Fetch recent medications with patient and prescriber info
                 cur.execute("""
                     SELECT 
                         m.medication_id,
@@ -219,7 +212,7 @@ def get_recent_activities():
                         "route": row['route']
                     })
                 
-                # Recent Encounters with provider and diagnosis info (nested subquery)
+                # Fetch recent encounters with patient, provider, and diagnosis info
                 cur.execute("""
                     SELECT 
                         e.encounter_id,
@@ -263,10 +256,10 @@ def get_recent_activities():
                         "diagnosis_code": row['diagnosis_code']
                     })
                 
-                # Sort all activities by date (most recent first)
+                # Sort by date descending
                 activities.sort(key=lambda x: x['date'] or '', reverse=True)
                 
-                # Return top 15 most recent activities
+                # Return top 15 activities
                 return jsonify({
                     "activities": activities[:15]
                 })

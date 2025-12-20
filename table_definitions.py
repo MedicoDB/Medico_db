@@ -14,8 +14,7 @@ CREATE_TABLES_SQL = [
         department VARCHAR(255) NOT NULL,
         head_provider_id VARCHAR(50) NOT NULL,
         head_name VARCHAR(255) NOT NULL,
-        head_email VARCHAR(255) UNIQUE DEFAULT NULL,
-        FOREIGN KEY (head_provider_id) REFERENCES providers(provider_id) ON DELETE RESTRICT ON UPDATE CASCADE
+        head_email VARCHAR(255) UNIQUE DEFAULT NULL
     );
     """,
     """
@@ -54,6 +53,11 @@ CREATE_TABLES_SQL = [
         head_id INT DEFAULT NULL,
         FOREIGN KEY (head_id) REFERENCES department_heads(head_id) ON DELETE SET NULL ON UPDATE CASCADE
     );
+    """,
+    """
+    ALTER TABLE department_heads 
+    ADD CONSTRAINT fk_department_heads_provider 
+    FOREIGN KEY (head_provider_id) REFERENCES providers(provider_id) ON DELETE RESTRICT ON UPDATE CASCADE;
     """,
     """
     CREATE TABLE encounters (

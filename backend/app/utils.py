@@ -1,7 +1,5 @@
 """
-Utility functions for the Hospital Management System.
-Contains ID generation logic for string-based primary keys.
-Age calculation is done directly in SQL using TIMESTAMPDIFF, not in Python.
+Utility functions for ID generation and validation.
 """
 from mysql.connector import Error
 
@@ -10,23 +8,20 @@ ALLOWED_TABLES = {'patients', 'encounters', 'claims_and_billing', 'medications',
 ALLOWED_ID_COLUMNS = {'patient_id', 'encounter_id', 'billing_id', 'medication_id', 'provider_id', 'denial_id', 'procedure_id', 'diagnosis_id', 'head_id', 'claim_id', 'test_id'}
 
 def generate_new_id(cursor, table_name, column_name, prefix, padding=6):
-    """
-    Generates IDs like PAT000001, BILL000001, DEN00001.
-    Uses raw SQL queries with mysql.connector (NO ORM).
-    """
-    # Validate table and column names for security
+    """Generate sequential IDs with prefix (e.g., PAT000001)."""
+    # Validate inputs against whitelist
     if table_name not in ALLOWED_TABLES:
         raise Error(f"Invalid table name: {table_name}")
     if column_name not in ALLOWED_ID_COLUMNS:
         raise Error(f"Invalid column name: {column_name}")
     
     try:
-        # Use parameterized query structure (table/column names are whitelisted)
+        # Get max ID from database
         query = f"SELECT MAX(`{column_name}`) as max_id FROM `{table_name}`"
         cursor.execute(query)
         result = cursor.fetchone()
         
-        # Cursor dictionary=True ise result['max_id'], değilse result[0]
+        # Extract max_id value
         if isinstance(result, dict):
             max_id = result.get('max_id')
         elif result:
@@ -34,14 +29,14 @@ def generate_new_id(cursor, table_name, column_name, prefix, padding=6):
         else:
             max_id = None
         
+        # Calculate next number
         if max_id is None:
             new_number = 1
         else:
-            # Prefix'i temizle (örn: 'PAT001464' -> '001464')
+            # Extract numeric part from existing ID
             if max_id.startswith(prefix):
                 numeric_part = max_id[len(prefix):]
             else:
-                # Prefix yoksa sadece sayıları al
                 numeric_part = ''.join(filter(str.isdigit, max_id))
             
             try:
@@ -49,7 +44,7 @@ def generate_new_id(cursor, table_name, column_name, prefix, padding=6):
             except ValueError:
                 new_number = 1
         
-        # Belirtilen padding kadar sıfır ekle
+        # Format with zero padding
         formatted_number = str(new_number).zfill(padding)
         new_id = f"{prefix}{formatted_number}"
         
