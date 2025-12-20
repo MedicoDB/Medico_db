@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../services/api";
+import Sidebar from "../components/Sidebar";
 import "../HomePage.css";
 
 const ProvidersPage = () => {
@@ -219,64 +220,35 @@ const ProvidersPage = () => {
   const hasFilters = Object.values(filters).some(v => v !== "" && v !== null) || searchTerm;
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
-      <div style={{ display: "flex" }}>
-        {/* Sidebar */}
-        <div style={{
-          width: "260px",
-          backgroundColor: "var(--hp-bg-card)",
-          borderRight: "1px solid var(--hp-border)",
-          minHeight: "100vh",
-          padding: "24px 0",
-          position: "sticky",
-          top: 0,
-          height: "100vh",
-          overflowY: "auto"
-        }}>
-          <div style={{ padding: "0 20px", marginBottom: "32px" }}>
-            <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
-              Medico
-            </h2>
-          </div>
-          <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
-            <Link to="/" className="hp-nav-item">Dashboard</Link>
-            <Link to="/patients" className="hp-nav-item">Patients</Link>
-            <Link to="/encounters" className="hp-nav-item">Encounters</Link>
-            <Link to="/insurers" className="hp-nav-item">Insurers</Link>
-            <Link to="/claims" className="hp-nav-item">Claims</Link>
-            <Link to="/denials" className="hp-nav-item">Denials</Link>
-            <Link to="/procedures" className="hp-nav-item">Procedures</Link>
-            <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
-            <Link to="/medications" className="hp-nav-item">Medications</Link>
-            <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
-            <Link to="/providers" className="hp-nav-item hp-nav-item--active">Providers</Link>
-            <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
-          </nav>
-        </div>
+    <div className="hp-root">
+      <Sidebar />
 
-        {/* Main Content */}
-        <div style={{ flex: 1 }}>
-          <header style={{
-            backgroundColor: "var(--hp-bg-card)",
-            borderBottom: "1px solid var(--hp-border)",
-            padding: "20px 32px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
-            <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "600", color: "var(--hp-text-main)" }}>
-              Providers
-            </h1>
-            <button
-              className="hp-primary-btn"
-              onClick={handleAdd}
-              style={{ padding: "12px 24px" }}
-            >
-              + Add New Provider
-            </button>
+      {/* Main Content */}
+      <div className="hp-main">
+          <header className="hp-header">
+            <div>
+              <h1 className="hp-header-title">Providers</h1>
+              <p className="hp-header-subtitle">Manage healthcare providers, specialties and departments.</p>
+            </div>
+            <div className="hp-header-actions">
+              <input
+                type="text"
+                className="hp-search"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: "250px" }}
+              />
+              <button
+                className="hp-primary-btn"
+                onClick={handleAdd}
+              >
+                + Add New
+              </button>
+            </div>
           </header>
 
-          <div style={{ padding: "24px" }}>
+          <div className="hp-page-content">
             {error && (
               <div style={{ padding: "12px", marginBottom: "16px", backgroundColor: "rgba(220, 53, 69, 0.1)", color: "#dc3545", borderRadius: "8px", border: "1px solid rgba(220, 53, 69, 0.3)" }}>
                 {error}
@@ -284,7 +256,7 @@ const ProvidersPage = () => {
             )}
 
             {/* Search Bar */}
-            <div style={{ marginBottom: "20px" }}>
+            <div style={{ marginBottom: "20px", marginLeft: "20px", marginRight: "20px" }}>
               <input
                 type="text"
                 className="hp-search"
@@ -296,12 +268,9 @@ const ProvidersPage = () => {
             </div>
 
             {/* Advanced Filters Card */}
-            <div style={{ 
-              backgroundColor: "var(--hp-bg-card)", 
-              borderRadius: "var(--hp-radius-lg)", 
+            <div className="hp-section" style={{ 
               marginBottom: "24px",
-              border: "1px solid var(--hp-border)",
-              overflow: "hidden"
+              zIndex: 10
             }}>
               <div 
                 style={{ 
@@ -432,16 +401,10 @@ const ProvidersPage = () => {
               </div>
             ) : (
               <>
-                <div style={{ 
-                  backgroundColor: "var(--hp-bg-card)", 
-                  borderRadius: "var(--hp-radius-lg)", 
-                  overflow: "hidden",
-                  border: "1px solid var(--hp-border)",
-                  boxShadow: "var(--hp-shadow-soft)"
-                }}>
+                <div className="hp-table-container">
                   <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1000px" }}>
-                      <thead style={{ backgroundColor: "rgba(148, 163, 184, 0.1)" }}>
+                    <table className="hp-table">
+                      <thead>
                         <tr>
                           <th style={{ 
                             padding: "16px", 
@@ -543,22 +506,20 @@ const ProvidersPage = () => {
                               </td>
                               <td style={{ padding: "16px", textAlign: "center" }}>
                                 <button
-                                  className="hp-secondary-btn"
+                                  className="hp-btn-edit"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleEdit(provider);
                                   }}
-                                  style={{ padding: "6px 12px", marginRight: "8px", fontSize: "12px" }}
                                 >
                                   Edit
                                 </button>
                                 <button
-                                  className="hp-danger-btn"
+                                  className="hp-btn-delete"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setDeleteConfirm(provider.provider_id);
                                   }}
-                                  style={{ padding: "6px 12px", fontSize: "12px" }}
                                 >
                                   Delete
                                 </button>
@@ -626,12 +587,10 @@ const ProvidersPage = () => {
               </>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Add/Edit Modal */}
-      {showModal && (
-        <div style={{
+          {/* Add/Edit Modal */}
+          {showModal && (
+            <div style={{
           position: "fixed",
           top: 0,
           left: 0,
@@ -944,6 +903,7 @@ const ProvidersPage = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api";
+import Sidebar from "../components/Sidebar";
 import "../HomePage.css";
 
 const MedicationsPage = () => {
@@ -283,64 +284,35 @@ const MedicationsPage = () => {
   const hasFilters = Object.values(filters).some(v => v !== "" && v !== null) || searchTerm;
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
-      <div style={{ display: "flex" }}>
-        {/* Sidebar */}
-        <div style={{
-          width: "260px",
-          backgroundColor: "var(--hp-bg-card)",
-          borderRight: "1px solid var(--hp-border)",
-          minHeight: "100vh",
-          padding: "24px 0",
-          position: "sticky",
-          top: 0,
-          height: "100vh",
-          overflowY: "auto"
-        }}>
-          <div style={{ padding: "0 20px", marginBottom: "32px" }}>
-            <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
-              Medico
-            </h2>
-          </div>
-          <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
-            <Link to="/" className="hp-nav-item">Dashboard</Link>
-            <Link to="/patients" className="hp-nav-item">Patients</Link>
-            <Link to="/encounters" className="hp-nav-item">Encounters</Link>
-            <Link to="/insurers" className="hp-nav-item">Insurers</Link>
-            <Link to="/claims" className="hp-nav-item">Claims</Link>
-            <Link to="/denials" className="hp-nav-item">Denials</Link>
-            <Link to="/procedures" className="hp-nav-item">Procedures</Link>
-            <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
-            <Link to="/medications" className="hp-nav-item hp-nav-item--active">Medications</Link>
-            <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
-            <Link to="/providers" className="hp-nav-item">Providers</Link>
-            <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
-          </nav>
-        </div>
+    <div className="hp-root">
+      <Sidebar />
 
-        {/* Main Content */}
-        <div style={{ flex: 1 }}>
-          <header style={{
-            backgroundColor: "var(--hp-bg-card)",
-            borderBottom: "1px solid var(--hp-border)",
-            padding: "20px 32px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
-            <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "600", color: "var(--hp-text-main)" }}>
-              Medications
-            </h1>
-            <button
-              className="hp-primary-btn"
-              onClick={handleAdd}
-              style={{ padding: "12px 24px" }}
-            >
-              + Add New Medication
-            </button>
+      {/* Main Content */}
+      <div className="hp-main">
+          <header className="hp-header">
+            <div>
+              <h1 className="hp-header-title">Medications</h1>
+              <p className="hp-header-subtitle">Review medication history, prescribed dosages and prescriber information.</p>
+            </div>
+            <div className="hp-header-actions">
+              <input
+                type="text"
+                className="hp-search"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: "250px" }}
+              />
+              <button
+                className="hp-primary-btn"
+                onClick={handleAdd}
+              >
+                + Add New
+              </button>
+            </div>
           </header>
 
-          <div style={{ padding: "24px" }}>
+          <div className="hp-page-content">
             {error && (
               <div style={{ padding: "12px", marginBottom: "16px", backgroundColor: "rgba(220, 53, 69, 0.1)", color: "#dc3545", borderRadius: "8px", border: "1px solid rgba(220, 53, 69, 0.3)" }}>
                 {error}
@@ -348,7 +320,7 @@ const MedicationsPage = () => {
             )}
 
             {/* Search Bar */}
-            <div style={{ marginBottom: "20px" }}>
+            <div style={{ marginBottom: "20px", marginLeft: "20px", marginRight: "20px" }}>
               <input
                 type="text"
                 className="hp-search"
@@ -360,12 +332,9 @@ const MedicationsPage = () => {
             </div>
 
             {/* Advanced Filters Card */}
-            <div style={{ 
-              backgroundColor: "var(--hp-bg-card)", 
-              borderRadius: "var(--hp-radius-lg)", 
+            <div className="hp-section" style={{ 
               marginBottom: "24px",
-              border: "1px solid var(--hp-border)",
-              overflow: "hidden"
+              zIndex: 10
             }}>
               <div 
                 style={{ 
@@ -522,86 +491,22 @@ const MedicationsPage = () => {
               </div>
             ) : (
               <>
-                <div style={{ 
-                  backgroundColor: "var(--hp-bg-card)", 
-                  borderRadius: "var(--hp-radius-lg)", 
-                  overflow: "hidden",
-                  border: "1px solid var(--hp-border)",
-                  boxShadow: "var(--hp-shadow-soft)"
-                }}>
+                <div className="hp-table-container">
                   <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "900px" }}>
-                      <thead style={{ backgroundColor: "rgba(148, 163, 184, 0.1)" }}>
+                    <table className="hp-table">
+                      <thead>
                         <tr>
-                          <th style={{ 
-                            padding: "16px", 
-                            textAlign: "left", 
-                            cursor: "pointer",
-                            color: "var(--hp-text-main)",
-                            fontWeight: "600",
-                            fontSize: "13px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em"
-                          }} onClick={() => handleSort("medication_id")}>
-                            Medication ID {sortBy === "medication_id" && (sortDirection === "asc" ? "↑" : "↓")}
+                          <th style={{ cursor: "pointer" }} onClick={() => handleSort("medication_id")}>
+                            DRUG NAME {sortBy === "medication_id" && (sortDirection === "asc" ? "↑" : "↓")}
                           </th>
-                          <th style={{ 
-                            padding: "16px", 
-                            textAlign: "left", 
-                            cursor: "pointer",
-                            color: "var(--hp-text-main)",
-                            fontWeight: "600",
-                            fontSize: "13px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em"
-                          }} onClick={() => handleSort("encounter_id")}>
-                            Encounter {sortBy === "encounter_id" && (sortDirection === "asc" ? "↑" : "↓")}
+                          <th>DOSAGE</th>
+                          <th>ROUTE</th>
+                          <th>PRESCRIBER</th>
+                          <th style={{ cursor: "pointer" }} onClick={() => handleSort("prescribed_date")}>
+                            DATE {sortBy === "prescribed_date" && (sortDirection === "asc" ? "↑" : "↓")}
                           </th>
-                          <th style={{ padding: "16px", textAlign: "left", color: "var(--hp-text-main)", fontWeight: "600", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                            Patient
-                          </th>
-                          <th style={{ 
-                            padding: "16px", 
-                            textAlign: "left", 
-                            cursor: "pointer",
-                            color: "var(--hp-text-main)",
-                            fontWeight: "600",
-                            fontSize: "13px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em"
-                          }} onClick={() => handleSort("drug_name")}>
-                            Drug Name {sortBy === "drug_name" && (sortDirection === "asc" ? "↑" : "↓")}
-                          </th>
-                          <th style={{ padding: "16px", textAlign: "left", color: "var(--hp-text-main)", fontWeight: "600", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                            Prescriber
-                          </th>
-                          <th style={{ 
-                            padding: "16px", 
-                            textAlign: "left", 
-                            cursor: "pointer",
-                            color: "var(--hp-text-main)",
-                            fontWeight: "600",
-                            fontSize: "13px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em"
-                          }} onClick={() => handleSort("prescribed_date")}>
-                            Prescribed Date {sortBy === "prescribed_date" && (sortDirection === "asc" ? "↑" : "↓")}
-                          </th>
-                          <th style={{ 
-                            padding: "16px", 
-                            textAlign: "right", 
-                            cursor: "pointer",
-                            color: "var(--hp-text-main)",
-                            fontWeight: "600",
-                            fontSize: "13px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em"
-                          }} onClick={() => handleSort("cost")}>
-                            Cost {sortBy === "cost" && (sortDirection === "asc" ? "↑" : "↓")}
-                          </th>
-                          <th style={{ padding: "16px", textAlign: "center", color: "var(--hp-text-main)", fontWeight: "600", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                            Actions
-                          </th>
+                          <th>PATIENT</th>
+                          <th style={{ textAlign: "right" }}>ACTIONS</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -613,58 +518,41 @@ const MedicationsPage = () => {
                           </tr>
                         ) : (
                           medications.map((medication) => (
-                            <tr key={medication.medication_id} style={{ borderTop: "1px solid var(--hp-border)" }}>
-                              <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
-                                <Link to={`/medications/${medication.medication_id}`} style={{ color: "var(--hp-primary)", textDecoration: "none", fontWeight: "500" }}>
-                                  {medication.medication_id}
-                                </Link>
-                              </td>
-                              <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
-                                <Link to={`/encounters/${medication.encounter_id}`} style={{ color: "var(--hp-primary)", textDecoration: "none", fontWeight: "500" }}>
-                                  {medication.encounter_id}
-                                </Link>
-                              </td>
-                              <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
-                                <Link to={`/patients/${medication.patient_id}`} style={{ color: "var(--hp-primary)", textDecoration: "none", fontWeight: "500" }}>
-                                  {medication.first_name} {medication.last_name}
-                                </Link>
-                              </td>
-                              <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
-                                {medication.drug_name}
-                              </td>
-                              <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
+                            <tr key={medication.medication_id}>
+                              <td>{medication.drug_name}</td>
+                              <td>{medication.dosage || "-"}</td>
+                              <td>{medication.route || "-"}</td>
+                              <td>
                                 {medication.prescriber_id ? (
-                                  <Link to={`/providers/${medication.prescriber_id}`} style={{ color: "var(--hp-primary)", textDecoration: "none", fontWeight: "500" }}>
+                                  <Link to={`/providers/${medication.prescriber_id}`} style={{ color: "var(--hp-primary)", textDecoration: "none" }}>
                                     {medication.prescriber_name || "-"}
                                   </Link>
                                 ) : (
                                   "-"
                                 )}
                               </td>
-                              <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
-                                {medication.prescribed_date ? new Date(medication.prescribed_date).toLocaleDateString() : "-"}
+                              <td>{medication.prescribed_date ? new Date(medication.prescribed_date).toLocaleDateString('en-GB') : "-"}</td>
+                              <td>
+                                <Link to={`/patients/${medication.patient_id}`} style={{ color: "var(--hp-primary)", textDecoration: "none" }}>
+                                  {medication.first_name} {medication.last_name}
+                                </Link>
                               </td>
-                              <td style={{ padding: "16px", textAlign: "right", color: "var(--hp-text-main)", fontWeight: "500" }}>
-                                ${(parseFloat(medication.cost) || 0).toFixed(2)}
-                              </td>
-                              <td style={{ padding: "16px", textAlign: "center" }}>
+                              <td style={{ textAlign: "right" }}>
                                 <button
-                                  className="hp-secondary-btn"
+                                  className="hp-btn-edit"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleEdit(medication);
                                   }}
-                                  style={{ padding: "6px 12px", marginRight: "8px", fontSize: "12px" }}
                                 >
                                   Edit
                                 </button>
                                 <button
-                                  className="hp-danger-btn"
+                                  className="hp-btn-delete"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setDeleteConfirm(medication.medication_id);
                                   }}
-                                  style={{ padding: "6px 12px", fontSize: "12px" }}
                                 >
                                   Delete
                                 </button>
@@ -732,11 +620,9 @@ const MedicationsPage = () => {
               </>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Add/Edit Modal */}
-      {showModal && (
+          {/* Add/Edit Modal */}
+          {showModal && (
         <div style={{
           position: "fixed",
           top: 0,
@@ -1033,6 +919,7 @@ const MedicationsPage = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

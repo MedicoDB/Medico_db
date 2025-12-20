@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api";
+import Sidebar from "../components/Sidebar";
 import "../HomePage.css";
 
 const InsurersPage = () => {
@@ -162,64 +163,35 @@ const InsurersPage = () => {
   const hasFilters = Object.values(filters).some(v => v) || searchTerm;
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
-      <div style={{ display: "flex" }}>
-        {/* Sidebar */}
-        <div style={{
-          width: "260px",
-          backgroundColor: "var(--hp-bg-card)",
-          borderRight: "1px solid var(--hp-border)",
-          minHeight: "100vh",
-          padding: "24px 0",
-          position: "sticky",
-          top: 0,
-          height: "100vh",
-          overflowY: "auto"
-        }}>
-          <div style={{ padding: "0 20px", marginBottom: "32px" }}>
-            <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
-              Medico
-            </h2>
-          </div>
-          <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
-            <Link to="/" className="hp-nav-item">Dashboard</Link>
-            <Link to="/patients" className="hp-nav-item">Patients</Link>
-            <Link to="/encounters" className="hp-nav-item">Encounters</Link>
-            <Link to="/insurers" className="hp-nav-item hp-nav-item--active">Insurers</Link>
-            <Link to="/claims" className="hp-nav-item">Claims</Link>
-            <Link to="/denials" className="hp-nav-item">Denials</Link>
-            <Link to="/procedures" className="hp-nav-item">Procedures</Link>
-            <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
-            <Link to="/medications" className="hp-nav-item">Medications</Link>
-            <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
-            <Link to="/providers" className="hp-nav-item">Providers</Link>
-            <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
-          </nav>
-        </div>
+    <div className="hp-root">
+      <Sidebar />
 
-        {/* Main Content */}
-        <div style={{ flex: 1 }}>
-          <header style={{
-            backgroundColor: "var(--hp-bg-card)",
-            borderBottom: "1px solid var(--hp-border)",
-            padding: "20px 32px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
-            <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "600", color: "var(--hp-text-main)" }}>
-              Insurers
-            </h1>
-            <button
-              className="hp-primary-btn"
-              onClick={handleAdd}
-              style={{ padding: "12px 24px" }}
-            >
-              + New Insurer
-            </button>
+      {/* Main Content */}
+      <div className="hp-main">
+          <header className="hp-header">
+            <div>
+              <h1 className="hp-header-title">Insurers</h1>
+              <p className="hp-header-subtitle">Manage insurance providers and payer information.</p>
+            </div>
+            <div className="hp-header-actions">
+              <input
+                type="text"
+                className="hp-search"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: "250px" }}
+              />
+              <button
+                className="hp-primary-btn"
+                onClick={handleAdd}
+              >
+                + Add New
+              </button>
+            </div>
           </header>
 
-            <div style={{ padding: "24px" }}>
+          <div className="hp-page-content">
             {error && (
               <div style={{ padding: "12px", marginBottom: "16px", backgroundColor: "rgba(220, 53, 69, 0.1)", color: "#dc3545", borderRadius: "8px", border: "1px solid rgba(220, 53, 69, 0.3)" }}>
                 {error}
@@ -227,7 +199,7 @@ const InsurersPage = () => {
             )}
 
             {/* Search Bar */}
-            <div style={{ marginBottom: "20px" }}>
+            <div style={{ marginBottom: "20px", marginLeft: "20px", marginRight: "20px" }}>
               <input
                 type="text"
                 className="hp-search"
@@ -239,13 +211,10 @@ const InsurersPage = () => {
             </div>
 
             {/* Advanced Filters Card */}
-          <div style={{ 
-            backgroundColor: "var(--hp-bg-card)", 
-            borderRadius: "var(--hp-radius-lg)", 
-            marginBottom: "24px",
-            border: "1px solid var(--hp-border)",
-            overflow: "hidden"
-          }}>
+            <div className="hp-section" style={{ 
+              marginBottom: "24px",
+              zIndex: 10
+            }}>
             <div 
               style={{ 
                 padding: "16px 20px", 
@@ -334,87 +303,22 @@ const InsurersPage = () => {
             </div>
           ) : (
             <>
-              <div style={{ 
-                backgroundColor: "var(--hp-bg-card)", 
-                borderRadius: "var(--hp-radius-lg)", 
-                overflow: "hidden",
-                border: "1px solid var(--hp-border)",
-                boxShadow: "var(--hp-shadow-soft)"
-              }}>
+              <div className="hp-table-container">
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "800px" }}>
-                    <thead style={{ backgroundColor: "rgba(148, 163, 184, 0.1)" }}>
+                  <table className="hp-table">
+                    <thead>
                       <tr>
-                        <th style={{ 
-                          padding: "16px", 
-                          textAlign: "left", 
-                          cursor: "pointer",
-                          color: "var(--hp-text-main)",
-                          fontWeight: "600",
-                          fontSize: "13px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em"
-                        }} onClick={() => handleSort("insurer_id")}>
-                          ID {sortBy === "insurer_id" && (sortDirection === "asc" ? "↑" : "↓")}
+                        <th style={{ cursor: "pointer" }} onClick={() => handleSort("code")}>
+                          CODE {sortBy === "code" && (sortDirection === "asc" ? "↑" : "↓")}
                         </th>
-                        <th style={{ 
-                          padding: "16px", 
-                          textAlign: "left", 
-                          cursor: "pointer",
-                          color: "var(--hp-text-main)",
-                          fontWeight: "600",
-                          fontSize: "13px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em"
-                        }} onClick={() => handleSort("code")}>
-                          Code {sortBy === "code" && (sortDirection === "asc" ? "↑" : "↓")}
+                        <th style={{ cursor: "pointer" }} onClick={() => handleSort("name")}>
+                          NAME {sortBy === "name" && (sortDirection === "asc" ? "↑" : "↓")}
                         </th>
-                        <th style={{ 
-                          padding: "16px", 
-                          textAlign: "left", 
-                          cursor: "pointer",
-                          color: "var(--hp-text-main)",
-                          fontWeight: "600",
-                          fontSize: "13px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em"
-                        }} onClick={() => handleSort("name")}>
-                          Name {sortBy === "name" && (sortDirection === "asc" ? "↑" : "↓")}
+                        <th style={{ cursor: "pointer" }} onClick={() => handleSort("payer_type")}>
+                          PAYER TYPE {sortBy === "payer_type" && (sortDirection === "asc" ? "↑" : "↓")}
                         </th>
-                        <th style={{ 
-                          padding: "16px", 
-                          textAlign: "left", 
-                          cursor: "pointer",
-                          color: "var(--hp-text-main)",
-                          fontWeight: "600",
-                          fontSize: "13px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em"
-                        }} onClick={() => handleSort("payer_type")}>
-                          Payer Type {sortBy === "payer_type" && (sortDirection === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th style={{ 
-                          padding: "16px", 
-                          textAlign: "left",
-                          color: "var(--hp-text-main)",
-                          fontWeight: "600",
-                          fontSize: "13px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em"
-                        }}>
-                          Phone
-                        </th>
-                        <th style={{ 
-                          padding: "16px", 
-                          textAlign: "right",
-                          color: "var(--hp-text-main)",
-                          fontWeight: "600",
-                          fontSize: "13px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em"
-                        }}>
-                          Actions
-                        </th>
+                        <th>PHONE</th>
+                        <th style={{ textAlign: "right" }}>ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -426,85 +330,34 @@ const InsurersPage = () => {
                         </tr>
                       ) : (
                         insurers.map((insurer) => (
-                          <tr 
-                            key={insurer.insurer_id} 
-                            style={{ 
-                              borderTop: "1px solid var(--hp-border)",
-                              transition: "var(--hp-transition-fast)"
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(148, 163, 184, 0.05)"}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-                          >
-                            <td style={{ padding: "16px" }}>
-                              <span style={{
-                                padding: "4px 10px",
-                                backgroundColor: "rgba(148, 163, 184, 0.15)",
-                                borderRadius: "6px",
-                                fontSize: "12px",
-                                fontWeight: "500",
-                                color: "var(--hp-text-main)"
-                              }}>
-                                {insurer.insurer_id}
-                              </span>
-                            </td>
-                            <td style={{ padding: "16px" }}>
-                              <span style={{
-                                padding: "4px 10px",
-                                backgroundColor: "rgba(59, 130, 246, 0.15)",
-                                borderRadius: "6px",
-                                fontSize: "12px",
-                                fontWeight: "500",
-                                color: "var(--hp-primary)",
-                                border: "1px solid rgba(59, 130, 246, 0.3)"
-                              }}>
-                                {insurer.code}
-                              </span>
-                            </td>
-                            <td style={{ padding: "16px", fontWeight: "500", color: "var(--hp-text-main)" }}>
+                          <tr key={insurer.insurer_id}>
+                            <td>{insurer.code}</td>
+                            <td>
                               <Link 
                                 to={`/insurers/${insurer.insurer_id}`}
                                 style={{ 
                                   color: "var(--hp-primary)", 
-                                  textDecoration: "none",
-                                  fontWeight: "500"
+                                  textDecoration: "none"
                                 }}
                               >
                                 {insurer.name}
                               </Link>
                             </td>
-                            <td style={{ padding: "16px", color: "var(--hp-text-soft)" }}>
-                              {insurer.payer_type}
-                            </td>
-                            <td style={{ padding: "16px", color: "var(--hp-text-soft)" }}>
-                              {insurer.phone || "-"}
-                            </td>
-                            <td style={{ padding: "16px", textAlign: "right" }}>
-                              <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                                <button
-                                  onClick={() => handleEdit(insurer)}
-                                  className="hp-primary-btn"
-                                  style={{ padding: "6px 12px", fontSize: "13px" }}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(insurer.insurer_id)}
-                                  style={{
-                                    padding: "6px 12px",
-                                    backgroundColor: "rgba(220, 53, 69, 0.2)",
-                                    color: "#dc3545",
-                                    border: "1px solid rgba(220, 53, 69, 0.3)",
-                                    borderRadius: "6px",
-                                    cursor: "pointer",
-                                    fontSize: "13px",
-                                    transition: "var(--hp-transition-fast)"
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(220, 53, 69, 0.3)"}
-                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(220, 53, 69, 0.2)"}
-                                >
-                                  Delete
-                                </button>
-                              </div>
+                            <td>{insurer.payer_type}</td>
+                            <td>{insurer.phone || "-"}</td>
+                            <td style={{ textAlign: "right" }}>
+                              <button
+                                onClick={() => handleEdit(insurer)}
+                                className="hp-btn-edit"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(insurer.insurer_id)}
+                                className="hp-btn-delete"
+                              >
+                                Delete
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -585,12 +438,11 @@ const InsurersPage = () => {
               </div>
             </>
           )}
-        </div> 
         </div>
-      </div>
-      {/* Add/Edit Modal */}
-      {showModal && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, }} onClick={() => setShowModal(false)}>
+
+          {/* Add/Edit Modal */}
+          {showModal && (
+            <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, }} onClick={() => setShowModal(false)}>
           <div
             style={{
               backgroundColor: "var(--hp-bg-card)",
@@ -686,6 +538,7 @@ const InsurersPage = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

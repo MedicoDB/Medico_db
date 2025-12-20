@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api";
+import Sidebar from "../components/Sidebar";
 import "../HomePage.css";
 
 const ClaimsPage = () => {
@@ -129,8 +130,7 @@ const ClaimsPage = () => {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, searchTerm, sortBy, sortDirection, filters.billing_id, filters.encounter_id, filters.claim_status, filters.billed_amount_min, filters.billed_amount_max, filters.claim_date_from, filters.claim_date_to, filters.payment_method]);
+  }, [currentPage, searchTerm, sortBy, sortDirection, filters]);
 
   // Reset to page 1 when filters/search/sort change
   useEffect(() => {
@@ -158,7 +158,7 @@ const ClaimsPage = () => {
     }
   }, [showModal, showEncounterDropdown, encounterSearchTerm, fetchEncounterOptions]);
 
-  const _handleAdd = () => {
+  const handleAdd = () => {
     setEditingClaim(null);
     setFormData({
       encounter_id: "",
@@ -262,58 +262,35 @@ const ClaimsPage = () => {
   const hasFilters = Object.values(filters).some(v => v !== "" && v !== null) || searchTerm;
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "var(--hp-bg-main)" }}>
-      <div style={{ display: "flex" }}>
-        {/* Sidebar */}
-        <div style={{
-          width: "260px",
-          backgroundColor: "var(--hp-bg-card)",
-          borderRight: "1px solid var(--hp-border)",
-          minHeight: "100vh",
-          padding: "24px 0",
-          position: "sticky",
-          top: 0,
-          height: "100vh",
-          overflowY: "auto"
-        }}>
-          <div style={{ padding: "0 20px", marginBottom: "32px" }}>
-            <h2 style={{ margin: 0, color: "var(--hp-primary)", fontSize: "24px", fontWeight: "700" }}>
-              Medico
-            </h2>
-          </div>
-          <nav style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "0 12px" }}>
-            <Link to="/" className="hp-nav-item">Dashboard</Link>
-            <Link to="/patients" className="hp-nav-item">Patients</Link>
-            <Link to="/encounters" className="hp-nav-item">Encounters</Link>
-            <Link to="/insurers" className="hp-nav-item">Insurers</Link>
-            <Link to="/claims" className="hp-nav-item hp-nav-item--active">Claims</Link>
-            <Link to="/denials" className="hp-nav-item">Denials</Link>
-            <Link to="/procedures" className="hp-nav-item">Procedures</Link>
-            <Link to="/lab-tests" className="hp-nav-item">Lab Tests</Link>
-            <Link to="/medications" className="hp-nav-item">Medications</Link>
-            <Link to="/diagnoses" className="hp-nav-item">Diagnoses</Link>
-            <Link to="/providers" className="hp-nav-item">Providers</Link>
-            <Link to="/department-heads" className="hp-nav-item">Department Heads</Link>
-          </nav>
-        </div>
+    <div className="hp-root">
+      <Sidebar />
 
-        {/* Main Content */}
-        <div style={{ flex: 1 }}>
-          <header style={{
-            backgroundColor: "var(--hp-bg-card)",
-            borderBottom: "1px solid var(--hp-border)",
-            padding: "20px 32px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
-            <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "600", color: "var(--hp-text-main)" }}>
-              Claims & Billing
-            </h1>
-            {/* Add button removed as claims are generated automatically */}
+      {/* Main Content */}
+      <div className="hp-main">
+          <header className="hp-header">
+            <div>
+              <h1 className="hp-header-title">Billing & Claims</h1>
+              <p className="hp-header-subtitle">Manage billing, claims, and payment information.</p>
+            </div>
+            <div className="hp-header-actions">
+              <input
+                type="text"
+                className="hp-search"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: "250px" }}
+              />
+              <button
+                className="hp-primary-btn"
+                onClick={handleAdd}
+              >
+                + Add New
+              </button>
+            </div>
           </header>
 
-          <div style={{ padding: "24px" }}>
+          <div className="hp-page-content">
             {error && (
               <div style={{ padding: "12px", marginBottom: "16px", backgroundColor: "rgba(220, 53, 69, 0.1)", color: "#dc3545", borderRadius: "8px", border: "1px solid rgba(220, 53, 69, 0.3)" }}>
                 {error}
@@ -321,7 +298,7 @@ const ClaimsPage = () => {
             )}
 
             {/* Search Bar */}
-            <div style={{ marginBottom: "20px" }}>
+            <div style={{ marginBottom: "20px", marginLeft: "20px", marginRight: "20px" }}>
               <input
                 type="text"
                 className="hp-search"
@@ -333,12 +310,9 @@ const ClaimsPage = () => {
             </div>
 
             {/* Advanced Filters Card */}
-            <div style={{ 
-              backgroundColor: "var(--hp-bg-card)", 
-              borderRadius: "var(--hp-radius-lg)", 
+            <div className="hp-section" style={{ 
               marginBottom: "24px",
-              border: "1px solid var(--hp-border)",
-              overflow: "hidden"
+              zIndex: 10
             }}>
               <div 
                 style={{ 
@@ -498,162 +472,67 @@ const ClaimsPage = () => {
               </div>
             ) : (
               <>
-                <div style={{ 
-                  backgroundColor: "var(--hp-bg-card)", 
-                  borderRadius: "var(--hp-radius-lg)", 
-                  overflow: "hidden",
-                  border: "1px solid var(--hp-border)",
-                  boxShadow: "var(--hp-shadow-soft)"
-                }}>
+                <div className="hp-table-container">
                   <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1000px" }}>
-                      <thead style={{ backgroundColor: "rgba(148, 163, 184, 0.1)" }}>
+                    <table className="hp-table">
+                      <thead>
                         <tr>
-                          <th style={{ 
-                            padding: "16px", 
-                            textAlign: "left", 
-                            cursor: "pointer",
-                            color: "var(--hp-text-main)",
-                            fontWeight: "600",
-                            fontSize: "13px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em"
-                          }} onClick={() => handleSort("billing_id")}>
-                            Billing ID {sortBy === "billing_id" && (sortDirection === "asc" ? "↑" : "↓")}
+                          <th>BILLING ID</th>
+                          <th>PATIENT ID</th>
+                          <th>ENCOUNTER ID</th>
+                          <th>INSURANCE</th>
+                          <th style={{ textAlign: "right" }}>BILLED AMOUNT</th>
+                          <th style={{ textAlign: "right" }}>PAID AMOUNT</th>
+                          <th style={{ cursor: "pointer" }} onClick={() => handleSort("claim_status")}>
+                            STATUS {sortBy === "claim_status" && (sortDirection === "asc" ? "↑" : "↓")}
                           </th>
-                          <th style={{ 
-                            padding: "16px", 
-                            textAlign: "left", 
-                            cursor: "pointer",
-                            color: "var(--hp-text-main)",
-                            fontWeight: "600",
-                            fontSize: "13px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em"
-                          }} onClick={() => handleSort("encounter_id")}>
-                            Encounter {sortBy === "encounter_id" && (sortDirection === "asc" ? "↑" : "↓")}
+                          <th style={{ cursor: "pointer" }} onClick={() => handleSort("claim_billing_date")}>
+                            DATE {sortBy === "claim_billing_date" && (sortDirection === "asc" ? "↑" : "↓")}
                           </th>
-                          <th style={{ padding: "16px", textAlign: "left", color: "var(--hp-text-main)", fontWeight: "600", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                            Patient
-                          </th>
-                          <th style={{ 
-                            padding: "16px", 
-                            textAlign: "left", 
-                            cursor: "pointer",
-                            color: "var(--hp-text-main)",
-                            fontWeight: "600",
-                            fontSize: "13px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em"
-                          }} onClick={() => handleSort("claim_billing_date")}>
-                            Claim Date {sortBy === "claim_billing_date" && (sortDirection === "asc" ? "↑" : "↓")}
-                          </th>
-                          <th style={{ 
-                            padding: "16px", 
-                            textAlign: "right", 
-                            cursor: "pointer",
-                            color: "var(--hp-text-main)",
-                            fontWeight: "600",
-                            fontSize: "13px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em"
-                          }} onClick={() => handleSort("billed_amount")}>
-                            Billed Amount {sortBy === "billed_amount" && (sortDirection === "asc" ? "↑" : "↓")}
-                          </th>
-                          <th style={{ 
-                            padding: "16px", 
-                            textAlign: "right", 
-                            color: "var(--hp-text-main)",
-                            fontWeight: "600",
-                            fontSize: "13px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em"
-                          }}>
-                            Paid Amount
-                          </th>
-                          <th style={{ 
-                            padding: "16px", 
-                            textAlign: "left", 
-                            cursor: "pointer",
-                            color: "var(--hp-text-main)",
-                            fontWeight: "600",
-                            fontSize: "13px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em"
-                          }} onClick={() => handleSort("claim_status")}>
-                            Status {sortBy === "claim_status" && (sortDirection === "asc" ? "↑" : "↓")}
-                          </th>
-                          <th style={{ padding: "16px", textAlign: "center", color: "var(--hp-text-main)", fontWeight: "600", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                            Actions
-                          </th>
+                          <th style={{ textAlign: "right" }}>ACTIONS</th>
                         </tr>
                       </thead>
                       <tbody>
                         {claims.length === 0 ? (
                           <tr>
-                            <td colSpan="8" style={{ padding: "40px", textAlign: "center", color: "var(--hp-text-soft)" }}>
+                            <td colSpan="9" style={{ padding: "40px", textAlign: "center", color: "var(--hp-text-soft)" }}>
                               No claims found
                             </td>
                           </tr>
                         ) : (
                           claims.map((claim) => (
-                            <tr key={claim.billing_id} style={{ borderTop: "1px solid var(--hp-border)" }}>
-                              <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
-                                <Link to={`/claims/${claim.billing_id}`} style={{ color: "var(--hp-primary)", textDecoration: "none", fontWeight: "500" }}>
+                            <tr key={claim.billing_id}>
+                              <td>
+                                <Link to={`/claims/${claim.billing_id}`} style={{ color: "var(--hp-primary)", textDecoration: "none" }}>
                                   {claim.billing_id}
                                 </Link>
                               </td>
-                              <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
-                                <Link to={`/encounters/${claim.encounter_id}`} style={{ color: "var(--hp-primary)", textDecoration: "none", fontWeight: "500" }}>
+                              <td>
+                                <Link to={`/patients/${claim.patient_id}`} style={{ color: "var(--hp-primary)", textDecoration: "none" }}>
+                                  {claim.patient_id}
+                                </Link>
+                              </td>
+                              <td>
+                                <Link to={`/encounters/${claim.encounter_id}`} style={{ color: "var(--hp-primary)", textDecoration: "none" }}>
                                   {claim.encounter_id}
                                 </Link>
                               </td>
-                              <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
-                                {claim.first_name} {claim.last_name}
-                              </td>
-                              <td style={{ padding: "16px", color: "var(--hp-text-main)" }}>
-                                {claim.claim_billing_date ? new Date(claim.claim_billing_date).toLocaleDateString() : "-"}
-                              </td>
-                              <td style={{ padding: "16px", textAlign: "right", color: "var(--hp-text-main)", fontWeight: "500" }}>
-                                ${(parseFloat(claim.billed_amount) || 0).toFixed(2)}
-                              </td>
-                              <td style={{ padding: "16px", textAlign: "right", color: "var(--hp-text-main)" }}>
-                                ${(parseFloat(claim.paid_amount) || 0).toFixed(2)}
-                              </td>
-                              <td style={{ padding: "16px" }}>
-                                <span style={{
-                                  padding: "4px 12px",
-                                  borderRadius: "12px",
-                                  fontSize: "12px",
-                                  fontWeight: "500",
-                                  backgroundColor: claim.claim_status === "Approved" || claim.claim_status === "Paid" ? "rgba(34, 197, 94, 0.1)" : 
-                                                  claim.claim_status === "Denied" || claim.claim_status === "Rejected" ? "rgba(239, 68, 68, 0.1)" :
-                                                  "rgba(148, 163, 184, 0.1)",
-                                  color: claim.claim_status === "Approved" || claim.claim_status === "Paid" ? "rgb(34, 197, 94)" :
-                                          claim.claim_status === "Denied" || claim.claim_status === "Rejected" ? "rgb(239, 68, 68)" :
-                                          "var(--hp-text-soft)"
-                                }}>
+                              <td>{claim.insurance_provider || "-"}</td>
+                              <td style={{ textAlign: "right" }}>${(parseFloat(claim.billed_amount) || 0).toFixed(2)}</td>
+                              <td style={{ textAlign: "right" }}>${(parseFloat(claim.paid_amount) || 0).toFixed(2)}</td>
+                              <td>
+                                <span className={claim.claim_status === "Paid" ? "hp-status-badge hp-status-badge--paid" : claim.claim_status === "Denied" ? "hp-status-badge hp-status-badge--denied" : "hp-status-badge hp-status-badge--pending"}>
                                   {claim.claim_status}
                                 </span>
                               </td>
-                              <td style={{ padding: "16px", textAlign: "center" }}>
+                              <td>{claim.claim_billing_date ? new Date(claim.claim_billing_date).toLocaleDateString('en-GB') : "-"}</td>
+                              <td style={{ textAlign: "right" }}>
                                 <button
-                                  className="hp-secondary-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEdit(claim);
-                                  }}
-                                  style={{ padding: "6px 12px", marginRight: "8px", fontSize: "12px" }}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  className="hp-danger-btn"
+                                  className="hp-btn-delete"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setDeleteConfirm(claim.billing_id);
                                   }}
-                                  style={{ padding: "6px 12px", fontSize: "12px" }}
                                 >
                                   Delete
                                 </button>
@@ -664,68 +543,83 @@ const ClaimsPage = () => {
                       </tbody>
                     </table>
                   </div>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div style={{ 
-                    marginTop: "24px", 
-                    display: "flex", 
-                    justifyContent: "center", 
-                    alignItems: "center",
-                    gap: "8px"
-                  }}>
-                    <button
-                      className="hp-secondary-btn"
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      style={{ padding: "8px 16px" }}
-                    >
-                      Previous
-                    </button>
-                    {Array.from({ length: Math.min(10, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 10) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 4) {
-                        pageNum = totalPages - 9 + i;
-                      } else {
-                        pageNum = currentPage - 5 + i;
-                      }
-                      return (
+                  
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div style={{ 
+                      padding: "16px 20px", 
+                      borderTop: "1px solid var(--hp-border)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      backgroundColor: "rgba(148, 163, 184, 0.05)"
+                    }}>
+                      <div style={{ color: "var(--hp-text-soft)", fontSize: "14px" }}>
+                        Showing {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} claims
+                      </div>
+                      <div style={{ display: "flex", gap: "8px" }}>
                         <button
-                          key={pageNum}
-                          className={currentPage === pageNum ? "hp-primary-btn" : "hp-secondary-btn"}
-                          onClick={() => setCurrentPage(pageNum)}
-                          style={{ padding: "8px 16px", minWidth: "40px" }}
+                          className="hp-secondary-btn"
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          style={{ 
+                            padding: "8px 16px", 
+                            fontSize: "14px",
+                            opacity: currentPage === 1 ? 0.5 : 1,
+                            cursor: currentPage === 1 ? "not-allowed" : "pointer"
+                          }}
                         >
-                          {pageNum}
+                          ← Prev
                         </button>
-                      );
-                    })}
-                    <button
-                      className="hp-secondary-btn"
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                      style={{ padding: "8px 16px" }}
-                    >
-                      Next
-                    </button>
-                    <span style={{ marginLeft: "16px", color: "var(--hp-text-soft)", fontSize: "14px" }}>
-                      Showing {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount}
-                    </span>
-                  </div>
-                )}
+                        {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 7) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 4) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 3) {
+                            pageNum = totalPages - 6 + i;
+                          } else {
+                            pageNum = currentPage - 3 + i;
+                          }
+                          return (
+                            <button
+                              key={pageNum}
+                              className={currentPage === pageNum ? "hp-primary-btn" : "hp-secondary-btn"}
+                              onClick={() => setCurrentPage(pageNum)}
+                              style={{ 
+                                padding: "8px 16px", 
+                                fontSize: "14px",
+                                minWidth: "40px"
+                              }}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                        <button
+                          className="hp-secondary-btn"
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                          style={{ 
+                            padding: "8px 16px", 
+                            fontSize: "14px",
+                            opacity: currentPage === totalPages ? 0.5 : 1,
+                            cursor: currentPage === totalPages ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Add/Edit Modal */}
-      {showModal && (
+          {/* Add/Edit Modal */}
+          {showModal && (
         <div style={{
           position: "fixed",
           top: 0,
@@ -1002,6 +896,7 @@ const ClaimsPage = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
