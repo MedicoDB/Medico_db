@@ -3,6 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import SharedLayout from "../components/SharedLayout";
 import "./Pages.css";
 import { api } from "../services/api";
+import AsyncSelect from "../components/AsyncSelect";
+import Pagination from "../components/Pagination";
 
 const PAGE_SIZE = 50;
 
@@ -84,6 +86,19 @@ const EncountersPage = () => {
     setNewEncounter((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFKChange = (field, value) => {
+    setNewEncounter((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Label formatters for dropdowns
+  const formatPatientLabel = (patient) => {
+    return `${patient.patient_id} — ${patient.first_name} ${patient.last_name}`;
+  };
+
+  const formatProviderLabel = (provider) => {
+    return `${provider.provider_id} — ${provider.name}${provider.specialty ? ` (${provider.specialty})` : ''}`;
+  };
+
   const closeForm = () => {
     setShowAddForm(false);
     setEditingEncounterId(null);
@@ -134,10 +149,7 @@ const EncountersPage = () => {
     }
   };
 
-  const canPrev = page > 0;
-  const canNext = (page + 1) * PAGE_SIZE < total;
-  const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
-  const end = total === 0 ? 0 : Math.min(total, page * PAGE_SIZE + encounters.length);
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   const beginCreate = () => {
     setShowAddForm(true);
@@ -258,12 +270,28 @@ const EncountersPage = () => {
           <h3>{editingEncounterId ? "Edit Encounter" : "Create Encounter"}</h3>
           <form className="form-grid" onSubmit={handleSubmitEncounter}>
             <label>
-              Patient ID
-              <input name="patient_id" value={newEncounter.patient_id} onChange={handleFormChange} required />
+              Patient
+              <AsyncSelect
+                value={newEncounter.patient_id}
+                onChange={(value) => handleFKChange('patient_id', value)}
+                fetchOptions={api.getPatientOptions}
+                getOptionLabel={formatPatientLabel}
+                getOptionValue={(opt) => opt.patient_id}
+                placeholder="Select patient..."
+                required
+              />
             </label>
             <label>
-              Provider ID
-              <input name="provider_id" value={newEncounter.provider_id} onChange={handleFormChange} required />
+              Provider
+              <AsyncSelect
+                value={newEncounter.provider_id}
+                onChange={(value) => handleFKChange('provider_id', value)}
+                fetchOptions={api.getProviderOptions}
+                getOptionLabel={formatProviderLabel}
+                getOptionValue={(opt) => opt.provider_id}
+                placeholder="Select provider..."
+                required
+              />
             </label>
             <label>
               Visit Date
@@ -349,7 +377,7 @@ const EncountersPage = () => {
                 encounters.map((encounter) => (
                   <tr key={encounter.encounter_id}>
                     <td>{encounter.encounter_id}</td>
-                    <td>{encounter.first_name} {encounter.last_name}</td>
+                    <td>{encounter.patient_first_name} {encounter.patient_last_name}</td>
                     <td>{encounter.provider_name || 'N/A'}</td>
                     <td>{encounter.visit_date ? new Date(encounter.visit_date).toLocaleDateString() : 'N/A'}</td>
                     <td>{encounter.department || 'N/A'}</td>
@@ -369,17 +397,13 @@ const EncountersPage = () => {
             </tbody>
           </table>
         )}
-        <div className="page-pagination">
-          <button disabled={!canPrev} onClick={() => setPage((prev) => Math.max(prev - 1, 0))}>
-            ← Previous
-          </button>
-          <span>
-            Showing {start.toLocaleString()}-{end.toLocaleString()} of {total.toLocaleString()}
-          </span>
-          <button disabled={!canNext} onClick={() => setPage((prev) => prev + 1)}>
-            Next →
-          </button>
-        </div>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={(newPage) => setPage(newPage)}
+        />
       </div>
     </SharedLayout>
   );

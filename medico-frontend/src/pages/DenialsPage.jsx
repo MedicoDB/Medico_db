@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import SharedLayout from "../components/SharedLayout";
 import "./Pages.css";
 import { api } from "../services/api";
+import AsyncSelect from "../components/AsyncSelect";
+import Pagination from "../components/Pagination";
 
 const PAGE_SIZE = 50;
 
@@ -72,6 +74,22 @@ const DenialsPage = () => {
     setNewDenial((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFKChange = (field, value) => {
+    setNewDenial((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Label formatter for claim dropdown
+  const formatClaimLabel = (claim) => {
+    const date = claim.claim_billing_date ? new Date(claim.claim_billing_date).toLocaleDateString() : 'N/A';
+    const patientName = (claim.patient_first_name && claim.patient_last_name)
+      ? `${claim.patient_first_name} ${claim.patient_last_name}`
+      : (claim.first_name && claim.last_name)
+        ? `${claim.first_name} ${claim.last_name}`
+        : 'Unknown';
+    const amount = claim.billed_amount ? `$${parseFloat(claim.billed_amount).toFixed(2)}` : '$0.00';
+    return `${claim.claim_id || claim.billing_id} — ${patientName} — ${date} — ${amount}`;
+  };
+
   const handleAddDenial = async (e) => {
     e.preventDefault();
     setFormError(null);
@@ -115,10 +133,7 @@ const DenialsPage = () => {
     }
   };
 
-  const canPrev = page > 0;
-  const canNext = (page + 1) * PAGE_SIZE < total;
-  const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
-  const end = total === 0 ? 0 : Math.min(total, page * PAGE_SIZE + denials.length);
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <SharedLayout
@@ -216,11 +231,14 @@ const DenialsPage = () => {
           <h3>Create Denial</h3>
           <form className="form-grid" onSubmit={handleAddDenial}>
             <label>
-              Claim ID
-              <input
-                name="claim_id"
+              Claim
+              <AsyncSelect
                 value={newDenial.claim_id}
-                onChange={handleFormChange}
+                onChange={(value) => handleFKChange('claim_id', value)}
+                fetchOptions={api.getClaimOptions}
+                getOptionLabel={formatClaimLabel}
+                getOptionValue={(opt) => opt.claim_id || opt.billing_id}
+                placeholder="Select claim..."
                 required
               />
             </label>
@@ -364,24 +382,13 @@ const DenialsPage = () => {
             </tbody>
           </table>
         )}
-        <div className="page-pagination">
-          <button
-            disabled={!canPrev}
-            onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-          >
-            ← Previous
-          </button>
-          <span>
-            Showing {start.toLocaleString()}-{end.toLocaleString()} of{" "}
-            {total.toLocaleString()}
-          </span>
-          <button
-            disabled={!canNext}
-            onClick={() => setPage((prev) => prev + 1)}
-          >
-            Next →
-          </button>
-        </div>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={(newPage) => setPage(newPage)}
+        />
       </div>
     </SharedLayout>
   );

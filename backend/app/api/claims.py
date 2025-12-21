@@ -217,3 +217,37 @@ def get_encounters_options():
         return jsonify({"error": str(e)}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/options/patients")
+def get_patients_options():
+    """Get patients for dropdown options with optional search using SQL LIKE."""
+    try:
+        from ..models import PatientsModel
+        search = request.args.get("search", "").strip() or None
+        limit = int(request.args.get("limit", 50))
+        
+        result = PatientsModel.get_all(limit=limit, page=1, search=search)
+        patients = result.get('data', []) if isinstance(result, dict) else []
+        return jsonify(patients)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/options/insurers")
+def get_insurers_options():
+    """Get insurers for dropdown options with optional search using SQL LIKE."""
+    try:
+        from ..models import InsurersModel
+        search = request.args.get("search", "").strip() or None
+        limit = int(request.args.get("limit", 50))
+        
+        result = InsurersModel.get_all(limit=limit, page=1, search=search)
+        insurers = result.get('data', []) if isinstance(result, dict) else []
+        return jsonify(insurers)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

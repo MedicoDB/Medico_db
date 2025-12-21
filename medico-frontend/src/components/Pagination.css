@@ -1,0 +1,127 @@
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--hp-text-soft);
+}
+
+.pagination-info {
+  color: var(--hp-text-soft);
+  font-size: 13px;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pagination-numbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-btn {
+  padding: 6px 12px;
+  border-radius: var(--hp-radius-md);
+  border: 1px solid var(--hp-border);
+  background: transparent;
+  color: var(--hp-text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--hp-accent);
+  color: var(--hp-accent);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-btn-number {
+  min-width: 36px;
+}
+
+.pagination-btn-number.active {
+  background: var(--hp-accent);
+  color: #fff;
+  border-color: var(--hp-accent);
+  font-weight: 500;
+}
+
+.pagination-btn-number.active:hover {
+  background: var(--hp-accent-hover);
+  border-color: var(--hp-accent-hover);
+}
+
+.pagination-btn-nav {
+  padding: 6px 14px;
+}
+
+.pagination-ellipsis {
+  padding: 6px 4px;
+  color: var(--hp-text-soft);
+  user-select: none;
+}
+
+/* Light mode styles */
+body.light .pagination-info {
+  color: #64748b;
+}
+
+body.light .pagination-btn {
+  border-color: #d1d5db;
+  color: #1e293b;
+}
+
+body.light .pagination-btn:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+body.light .pagination-btn-number.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+body.light .pagination-btn-number.active:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+body.light .pagination-ellipsis {
+  color: #9ca3af;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pagination-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .pagination-controls {
+    justify-content: center;
+  }
+  
+  .pagination-numbers {
+    display: none; /* Hide page numbers on mobile, keep nav buttons */
+  }
+}

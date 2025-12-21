@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import SharedLayout from "../components/SharedLayout";
 import "./Pages.css";
+import Pagination from "../components/Pagination";
 
 const API_BASE = "/api";
 const PAGE_SIZE = 50;
@@ -53,8 +54,7 @@ const ProvidersPage = () => {
         }
     };
 
-    const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
-    const end = Math.min(total, page * PAGE_SIZE + providers.length);
+    const totalPages = Math.ceil(total / PAGE_SIZE);
 
     return (
         <SharedLayout
@@ -150,11 +150,13 @@ const ProvidersPage = () => {
                         </tbody>
                     </table>
                 )}
-                <div className="page-pagination">
-                    <button disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>← Previous</button>
-                    <span>Showing {start}-{end} of {total.toLocaleString()}</span>
-                    <button disabled={(page + 1) * PAGE_SIZE >= total} onClick={() => setPage(p => p + 1)}>Next →</button>
-                </div>
+                <Pagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    total={total}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={(newPage) => setPage(newPage)}
+                />
             </div>
         </SharedLayout>
     );

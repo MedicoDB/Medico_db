@@ -142,3 +142,171 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Filter section container - theme-aware */
+.filter-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--hp-bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--hp-border);
+}
+
+.filter-section h4 {
+  margin-bottom: 12px;
+  color: var(--hp-text-primary);
+}
+
+.filter-section label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: var(--hp-text-soft);
+}
+
+/* Filter section inputs and selects - use theme-aware styles */
+.filter-section input[type="date"],
+.filter-section select {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--hp-border);
+  background: var(--hp-bg-card);
+  color: var(--hp-text-primary);
+  font-size: 14px;
+}
+
+/* Override inline styles for filter sections in light mode - use very high specificity */
+body.light .page-section {
+  background: var(--hp-bg-card) !important;
+}
+
+/* Filter section background override */
+body.light .page-section[style*="background"] {
+  background: var(--hp-bg-soft) !important;
+  border-color: var(--hp-border) !important;
+}
+
+body.light .page-section h4 {
+  color: var(--hp-text-primary) !important;
+}
+
+body.light .page-section label {
+  color: var(--hp-text-soft) !important;
+}
+
+/* Override all filter section inputs and selects in light mode - very aggressive */
+body.light .page-section input,
+body.light .page-section select {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #1e293b !important;
+}
+
+/* Additional specificity for inputs with inline styles - target by type */
+body.light .page-section input[type="date"],
+body.light .page-section input[type="text"],
+body.light .page-section input[type="number"],
+body.light .page-section select {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #1e293b !important;
+}
+
+/* Force override for any element with specific dark color values in inline styles */
+body.light .page-section *[style*="#1e293b"] {
+  background: #ffffff !important;
+}
+
+body.light .page-section *[style*="334155"] {
+  background: #f1f5f9 !important;
+}
+
+body.light .page-section *[style*="#555"] {
+  border-color: #d1d5db !important;
+}
+
+body.light .page-section *[style*="#fff"],
+body.light .page-section *[style*="color: #fff"],
+body.light .page-section *[style*="color:#fff"] {
+  color: #1e293b !important;
+}
+
+/* Universal selector for all inputs/selects in filter sections - highest priority */
+body.light .page-section div input,
+body.light .page-section div select {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #1e293b !important;
+}
+
+/* Target filter section container background specifically - multiple selectors for coverage */
+body.light div[style*="background"][style*="334155"],
+body.light div[style*="background"][style*="var(--hp-bg-soft"],
+body.light .page-section[style*="334155"] {
+  background: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Very specific targeting for nested elements in filter sections */
+body.light .page-section > div[style*="background"] input,
+body.light .page-section > div[style*="background"] select,
+body.light .page-section div[style*="display: flex"] input,
+body.light .page-section div[style*="display: flex"] select {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #1e293b !important;
+}
+
+/* Nuclear option - override ALL inputs/selects in page-sections in light mode */
+body.light .page-section input[style],
+body.light .page-section select[style] {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #1e293b !important;
+}
+
+/* Override filter section container with inline background style */
+body.light .page-section[style*="334155"],
+body.light .page-section[style*="var(--hp-bg-soft"] {
+  background: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Override all text colors in filter sections */
+body.light .page-section[style*="334155"] h4,
+body.light .page-section[style*="var(--hp-bg-soft"] h4 {
+  color: #1e293b !important;
+}
+
+body.light .page-section[style*="334155"] label,
+body.light .page-section[style*="var(--hp-bg-soft"] label {
+  color: #64748b !important;
+}
+
+/* Ultimate override - target any element with inline styles containing dark colors */
+body.light input[style*="background"][style*="#1e293b"],
+body.light select[style*="background"][style*="#1e293b"],
+body.light input[style*="background: #1e293b"],
+body.light select[style*="background: #1e293b"],
+body.light input[style*="background:#1e293b"],
+body.light select[style*="background:#1e293b"] {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #1e293b !important;
+}
+
+body.light input[style*="color"][style*="#fff"],
+body.light select[style*="color"][style*="#fff"],
+body.light input[style*="color: #fff"],
+body.light select[style*="color: #fff"],
+body.light input[style*="color:#fff"],
+body.light select[style*="color:#fff"] {
+  color: #1e293b !important;
+}
+
+body.light input[style*="border"][style*="#555"],
+body.light select[style*="border"][style*="#555"],
+body.light input[style*="border: 1px solid #555"],
+body.light select[style*="border: 1px solid #555"] {
+  border-color: #d1d5db !important;
+}

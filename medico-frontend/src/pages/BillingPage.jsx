@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import SharedLayout from "../components/SharedLayout";
 import "./Pages.css";
 import { api } from "../services/api";
+import AsyncSelect from "../components/AsyncSelect";
+import Pagination from "../components/Pagination";
 
 const PAGE_SIZE = 50;
 
@@ -69,6 +71,29 @@ const BillingPage = () => {
     setNewClaim((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFKChange = (field, value) => {
+    setNewClaim((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Label formatters for dropdowns
+  const formatPatientLabel = (patient) => {
+    return `${patient.patient_id} — ${patient.first_name} ${patient.last_name}`;
+  };
+
+  const formatEncounterLabel = (encounter) => {
+    const date = encounter.visit_date ? new Date(encounter.visit_date).toLocaleDateString() : 'N/A';
+    const patientName = (encounter.patient_first_name && encounter.patient_last_name)
+      ? `${encounter.patient_first_name} ${encounter.patient_last_name}`
+      : (encounter.first_name && encounter.last_name)
+        ? `${encounter.first_name} ${encounter.last_name}`
+        : 'Unknown';
+    return `${encounter.encounter_id} — ${patientName} — ${date}`;
+  };
+
+  const formatInsurerLabel = (insurer) => {
+    return `${insurer.code} — ${insurer.name}`;
+  };
+
   const handleAddClaim = async (e) => {
     e.preventDefault();
     setFormError(null);
@@ -103,10 +128,7 @@ const BillingPage = () => {
     }
   };
 
-  const canPrev = page > 0;
-  const canNext = (page + 1) * PAGE_SIZE < total;
-  const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
-  const end = total === 0 ? 0 : Math.min(total, page * PAGE_SIZE + claims.length);
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <SharedLayout
@@ -187,16 +209,39 @@ const BillingPage = () => {
           <h3>Create Claim</h3>
           <form className="form-grid" onSubmit={handleAddClaim}>
             <label>
-              Patient ID
-              <input name="patient_id" value={newClaim.patient_id} onChange={handleFormChange} required />
+              Patient
+              <AsyncSelect
+                value={newClaim.patient_id}
+                onChange={(value) => handleFKChange('patient_id', value)}
+                fetchOptions={api.getPatientOptions}
+                getOptionLabel={formatPatientLabel}
+                getOptionValue={(opt) => opt.patient_id}
+                placeholder="Select patient..."
+                required
+              />
             </label>
             <label>
-              Encounter ID
-              <input name="encounter_id" value={newClaim.encounter_id} onChange={handleFormChange} required />
+              Encounter
+              <AsyncSelect
+                value={newClaim.encounter_id}
+                onChange={(value) => handleFKChange('encounter_id', value)}
+                fetchOptions={api.getEncounterOptions}
+                getOptionLabel={formatEncounterLabel}
+                getOptionValue={(opt) => opt.encounter_id}
+                placeholder="Select encounter..."
+                required
+              />
             </label>
             <label>
               Insurance Provider
-              <input name="insurance_provider" value={newClaim.insurance_provider} onChange={handleFormChange} />
+              <AsyncSelect
+                value={newClaim.insurance_provider}
+                onChange={(value) => handleFKChange('insurance_provider', value)}
+                fetchOptions={api.getInsurerOptions}
+                getOptionLabel={formatInsurerLabel}
+                getOptionValue={(opt) => opt.code}
+                placeholder="Select insurer (optional)..."
+              />
             </label>
             <label>
               Payment Method
@@ -277,17 +322,13 @@ const BillingPage = () => {
             </tbody>
           </table>
         )}
-        <div className="page-pagination">
-          <button disabled={!canPrev} onClick={() => setPage((prev) => Math.max(prev - 1, 0))}>
-            ← Previous
-          </button>
-          <span>
-            Showing {start.toLocaleString()}-{end.toLocaleString()} of {total.toLocaleString()}
-          </span>
-          <button disabled={!canNext} onClick={() => setPage((prev) => prev + 1)}>
-            Next →
-          </button>
-        </div>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={(newPage) => setPage(newPage)}
+        />
       </div>
     </SharedLayout>
   );

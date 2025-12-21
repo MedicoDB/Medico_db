@@ -230,5 +230,50 @@ export const api = {
     if (!response.ok) throw new Error('Failed to delete denial');
     return response.json();
   },
+
+  // Dropdown Options
+  getPatientOptions: async (search = '') => {
+    const params = new URLSearchParams({ limit: '50' });
+    if (search) params.append('search', search);
+    const response = await fetch(`${API_BASE_URL}/encounters/options/patients?${params}`);
+    if (!response.ok) throw new Error('Failed to fetch patient options');
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.data || []);
+  },
+
+  getProviderOptions: async (search = '') => {
+    const params = new URLSearchParams({ limit: '50' });
+    if (search) params.append('search', search);
+    const response = await fetch(`${API_BASE_URL}/encounters/options/providers?${params}`);
+    if (!response.ok) throw new Error('Failed to fetch provider options');
+    return await response.json();
+  },
+
+  getEncounterOptions: async (search = '') => {
+    const params = new URLSearchParams({ limit: '50' });
+    if (search) params.append('search', search);
+    const response = await fetch(`${API_BASE_URL}/procedures/options/encounters?${params}`);
+    if (!response.ok) throw new Error('Failed to fetch encounter options');
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.data || []);
+  },
+
+  getInsurerOptions: async (search = '') => {
+    const params = new URLSearchParams({ limit: '50' });
+    if (search) params.append('search', search);
+    const response = await fetch(`${API_BASE_URL}/patients/options/insurers?${params}`);
+    if (!response.ok) throw new Error('Failed to fetch insurer options');
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.data || []);
+  },
+
+  getClaimOptions: async (search = '') => {
+    const params = new URLSearchParams({ limit: '50' });
+    if (search) params.append('search', search);
+    const response = await fetch(`${API_BASE_URL}/denials/options/claims?${params}`);
+    if (!response.ok) throw new Error('Failed to fetch claim options');
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.data || []);
+  },
 };
 

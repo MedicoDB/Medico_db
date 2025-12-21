@@ -135,9 +135,12 @@ def delete_patient(patient_id):
 
 @bp.get("/options/insurers")
 def get_insurers():
-    """Get all insurers for dropdown options."""
+    """Get all insurers for dropdown options with optional search."""
     try:
-        result = InsurersModel.get_all(limit=1000, page=1)  # Get all insurers
+        search = request.args.get("search", "").strip() or None
+        limit = int(request.args.get("limit", 50))
+        
+        result = InsurersModel.get_all(limit=limit, page=1, search=search)
         # Return just the data array, not the pagination wrapper
         insurers = result.get('data', []) if isinstance(result, dict) else []
         return jsonify(insurers)

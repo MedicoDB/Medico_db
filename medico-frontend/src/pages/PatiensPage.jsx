@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import SharedLayout from "../components/SharedLayout";
 import "./Pages.css";
 import { api } from "../services/api";
+import AsyncSelect from "../components/AsyncSelect";
+import Pagination from "../components/Pagination";
 
 const initialForm = {
   first_name: "",
@@ -42,8 +44,7 @@ const PatientsPage = () => {
   const [genderFilter, setGenderFilter] = useState("");
   const [insuranceFilter, setInsuranceFilter] = useState("");
 
-  const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
-  const end = total === 0 ? 0 : Math.min(total, page * PAGE_SIZE + patients.length);
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -103,6 +104,14 @@ const PatientsPage = () => {
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setNewPatient((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFKChange = (field, value) => {
+    setNewPatient((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const formatInsurerLabel = (insurer) => {
+    return `${insurer.code} — ${insurer.name}`;
   };
 
   const handleSubmitPatient = async (e) => {
@@ -353,20 +362,14 @@ const PatientsPage = () => {
             </label>
             <label>
               Insurance Type
-              <select
-                name="insurance_type"
+              <AsyncSelect
                 value={newPatient.insurance_type}
-                onChange={handleFormChange}
-              >
-                <option value="">-- Select Insurance --</option>
-                <option value="Aetna">Aetna</option>
-                <option value="BCBS">Blue Cross Blue Shield (BCBS)</option>
-                <option value="Cigna">Cigna</option>
-                <option value="Humana">Humana</option>
-                <option value="Medicaid">Medicaid</option>
-                <option value="Medicare">Medicare</option>
-                <option value="UHC">UnitedHealthcare (UHC)</option>
-              </select>
+                onChange={(value) => handleFKChange('insurance_type', value)}
+                fetchOptions={api.getInsurerOptions}
+                getOptionLabel={formatInsurerLabel}
+                getOptionValue={(opt) => opt.code}
+                placeholder="Select insurance (optional)..."
+              />
             </label>
             <label>
               Phone
@@ -500,20 +503,13 @@ const PatientsPage = () => {
             </tbody>
           </table>
         )}
-        <div className="page-pagination">
-          <button disabled={page === 0} onClick={() => setPage((prev) => Math.max(prev - 1, 0))}>
-            ← Previous
-          </button>
-          <span>
-            Showing {start.toLocaleString()}-{end.toLocaleString()} of {total.toLocaleString()}
-          </span>
-          <button
-            disabled={(page + 1) * PAGE_SIZE >= total}
-            onClick={() => setPage((prev) => prev + 1)}
-          >
-            Next →
-          </button>
-        </div>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={(newPage) => setPage(newPage)}
+        />
       </div>
     </SharedLayout>
   );

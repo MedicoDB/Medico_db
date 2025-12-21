@@ -84,6 +84,16 @@ button:focus-visible {
 body.light {
   background: #ffffff;
   color: #1f2937;
+  /* CSS Variable overrides for light mode */
+  --hp-bg-main: #ffffff;
+  --hp-bg-card: #f8fafc;
+  --hp-bg-sidebar: #f8fafc;
+  --hp-bg-soft: #f1f5f9;
+  --hp-text-primary: #1e293b;
+  --hp-text-soft: #64748b;
+  --hp-text-muted: #94a3b8;
+  --hp-text-main: #1e293b;
+  --hp-border: #e2e8f0;
 }
 
 /* Sidebar light */

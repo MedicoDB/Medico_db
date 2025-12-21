@@ -168,9 +168,8 @@ def get_claims_options():
         
         result = ClaimsAndBillingModel.get_all(limit=limit, page=1, search=search)
         claims = result.get('data', []) if isinstance(result, dict) else []
-        # Return only claim_id and billing_id for dropdown
-        options = [{"claim_id": c.get("claim_id"), "billing_id": c.get("billing_id")} for c in claims if c.get("claim_id")]
-        return jsonify(options)
+        # Return full claim data for dropdown (includes patient info for labels)
+        return jsonify(claims)
     except Error as e:
         return jsonify({"error": str(e)}), 500
     except Exception as e:
