@@ -184,8 +184,8 @@ html, body {
 .hp-main {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  margin-left: 0;
+  width: calc(100% - 260px);
+  margin-left: 260px;
   overflow-x: visible;
   background: var(--hp-bg-main);
 }
@@ -1032,4 +1032,43 @@ html, body {
   .hp-overview-cards {
     grid-template-columns: 1fr;
   }
+}
+/* Light Mode */
+body.light {
+  --hp-bg-main: #f8fafc;
+  --hp-bg-alt: #ffffff;
+  --hp-bg-card: #ffffff;
+  --hp-bg-soft: #f1f5f9;
+  --hp-primary: #3b82f6;
+  --hp-primary-soft: rgba(59, 130, 246, 0.1);
+  --hp-border: rgba(148, 163, 184, 0.3);
+  --hp-text-main: #1e293b;
+  --hp-text-soft: #64748b;
+}
+
+body.light .hp-sidebar {
+  background: #ffffff;
+  border-right-color: rgba(148, 163, 184, 0.2);
+}
+
+body.light .hp-nav-item:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+body.light .hp-nav-item--active {
+  background: var(--hp-primary);
+  color: #ffffff;
+}
+
+body.light .hp-sidebar-footer {
+  background: #f1f5f9;
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+body.light .hp-table thead {
+  background: #f1f5f9;
+}
+
+body.light .hp-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.05);
 }

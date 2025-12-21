@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import "../HomePage.css";
+import ThemeToggle from "./ThemeToggle";
 
 const Sidebar = () => {
   const location = useLocation();
@@ -151,6 +152,9 @@ const Sidebar = () => {
           border: "1px solid var(--hp-border)",
         }}
       >
+        <div style={{ marginBottom: "12px" }}>
+          <ThemeToggle />
+        </div>
         <div
           style={{
             fontSize: "11px",
