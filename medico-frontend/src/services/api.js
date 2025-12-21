@@ -4,11 +4,14 @@ const jsonHeaders = {
 };
 
 const buildParams = (limit, offset, search) => {
+  // Backend uses page-based pagination (1-indexed), not offset
+  const page = Math.floor(offset / limit) + 1;
   const params = new URLSearchParams({
     limit: limit.toString(),
-    offset: offset.toString(),
+    page: page.toString(),
   });
-  if (search) params.append('search', search);
+  // Backend expects 'q' parameter for search, not 'search'
+  if (search) params.append('q', search);
   return params.toString();
 };
 
