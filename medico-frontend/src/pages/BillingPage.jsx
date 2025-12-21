@@ -28,6 +28,12 @@ const BillingPage = () => {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
 
+  // Filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
   useEffect(() => {
     const fetchClaims = async () => {
       try {
@@ -122,7 +128,42 @@ const BillingPage = () => {
         <button className="hp-primary-btn" onClick={() => setShowAddForm((prev) => !prev)}>
           + New Claim
         </button>
+        <button className="hp-secondary-btn" onClick={() => setShowFilters(!showFilters)} style={{ marginLeft: "8px" }}>
+          🔍 {showFilters ? "Hide Filters" : "Filters"}
+        </button>
       </div>
+
+      {showFilters && (
+        <div className="page-section" style={{ marginBottom: "20px", padding: "16px", background: "var(--hp-bg-soft, #334155)", borderRadius: "12px" }}>
+          <h4 style={{ marginBottom: "12px", color: "var(--hp-text-main)" }}>🔍 Advanced Filters</h4>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>Billing Date From</label>
+              <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>Billing Date To</label>
+              <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>Status</label>
+              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff", minWidth: "120px" }}>
+                <option value="">All</option>
+                <option value="Pending">Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Denied">Denied</option>
+                <option value="Paid">Paid</option>
+              </select>
+            </div>
+            <button className="hp-secondary-btn" onClick={() => { setDateFrom(""); setDateTo(""); setStatusFilter(""); setSearchTerm(""); setPage(0); }}>
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="page-grid">
         <div className="page-card">

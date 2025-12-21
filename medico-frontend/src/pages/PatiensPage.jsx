@@ -35,6 +35,13 @@ const PatientsPage = () => {
   const [total, setTotal] = useState(0);
   const [editingPatientId, setEditingPatientId] = useState(null);
 
+  // Date range filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [genderFilter, setGenderFilter] = useState("");
+  const [insuranceFilter, setInsuranceFilter] = useState("");
+
   const start = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const end = total === 0 ? 0 : Math.min(total, page * PAGE_SIZE + patients.length);
 
@@ -44,12 +51,37 @@ const PatientsPage = () => {
         setLoading(true);
         const { data, total } = await api.getPatients(PAGE_SIZE, page * PAGE_SIZE, searchTerm);
 
-        if (page > 0 && data.length === 0 && total > 0) {
+        // Apply frontend filters
+        let filteredData = data;
+
+        if (dateFrom) {
+          filteredData = filteredData.filter(p => {
+            const regDate = p.registration_date ? new Date(p.registration_date) : null;
+            return regDate && regDate >= new Date(dateFrom);
+          });
+        }
+
+        if (dateTo) {
+          filteredData = filteredData.filter(p => {
+            const regDate = p.registration_date ? new Date(p.registration_date) : null;
+            return regDate && regDate <= new Date(dateTo);
+          });
+        }
+
+        if (genderFilter) {
+          filteredData = filteredData.filter(p => p.gender === genderFilter);
+        }
+
+        if (insuranceFilter) {
+          filteredData = filteredData.filter(p => p.insurance_type === insuranceFilter);
+        }
+
+        if (page > 0 && filteredData.length === 0 && total > 0) {
           setPage((prev) => Math.max(prev - 1, 0));
           return;
         }
 
-        setPatients(data);
+        setPatients(filteredData);
         setTotal(total);
         setError(null);
       } catch (err) {
@@ -61,7 +93,7 @@ const PatientsPage = () => {
     };
 
     fetchPatients();
-  }, [searchTerm, refreshKey, page]);
+  }, [searchTerm, refreshKey, page, dateFrom, dateTo, genderFilter, insuranceFilter]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -177,7 +209,99 @@ const PatientsPage = () => {
               ? "Edit Patient"
               : "+ New Patient"}
         </button>
+        <button
+          className="hp-secondary-btn"
+          onClick={() => setShowFilters(!showFilters)}
+          style={{ marginLeft: "8px" }}
+        >
+          🔍 {showFilters ? "Hide Filters" : "Filters"}
+        </button>
       </div>
+
+      {/* Advanced Filters Panel */}
+      {showFilters && (
+        <div
+          className="page-section"
+          style={{
+            marginBottom: "20px",
+            padding: "16px",
+            background: "var(--hp-bg-soft, #334155)",
+            borderRadius: "12px"
+          }}
+        >
+          <h4 style={{ marginBottom: "12px", color: "var(--hp-text-main)" }}>🔍 Advanced Filters</h4>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>
+                Registration From
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff" }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>
+                Registration To
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff" }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>
+                Gender
+              </label>
+              <select
+                value={genderFilter}
+                onChange={(e) => { setGenderFilter(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff", minWidth: "120px" }}
+              >
+                <option value="">All</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>
+                Insurance
+              </label>
+              <select
+                value={insuranceFilter}
+                onChange={(e) => { setInsuranceFilter(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff", minWidth: "150px" }}
+              >
+                <option value="">All</option>
+                <option value="Aetna">Aetna</option>
+                <option value="BCBS">Blue Cross Blue Shield</option>
+                <option value="Cigna">Cigna</option>
+                <option value="Humana">Humana</option>
+                <option value="Medicaid">Medicaid</option>
+                <option value="Medicare">Medicare</option>
+                <option value="UHC">UnitedHealthcare</option>
+              </select>
+            </div>
+            <button
+              className="hp-secondary-btn"
+              onClick={() => {
+                setDateFrom("");
+                setDateTo("");
+                setGenderFilter("");
+                setInsuranceFilter("");
+                setSearchTerm("");
+                setPage(0);
+              }}
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Cards */}
       <div className="page-grid">
@@ -189,12 +313,6 @@ const PatientsPage = () => {
         <div className="page-card">
           <h3>📊 Demographics</h3>
           <p>View distribution by age, gender, location and insurance coverage.</p>
-          <button
-            className="hp-secondary-btn"
-            onClick={() => alert("Analytics feature coming soon!")}
-          >
-            View Analytics
-          </button>
         </div>
       </div>
 

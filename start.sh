@@ -19,8 +19,8 @@ if ! command -v node &> /dev/null; then
 fi
 
 # Start backend in background
-echo "Starting backend server on http://localhost:5000..."
-python3 run.py &
+echo "Starting backend server on http://localhost:5001..."
+python run.py &
 BACKEND_PID=$!
 
 # Wait a moment for backend to start
@@ -37,7 +37,7 @@ echo "Backend PID: $BACKEND_PID"
 echo "Frontend PID: $FRONTEND_PID"
 echo ""
 echo "Both servers are running!"
-echo "Backend: http://localhost:5000"
+echo "Backend: http://localhost:5001"
 echo "Frontend: http://localhost:5173"
 echo ""
 echo "Press Ctrl+C to stop both servers"

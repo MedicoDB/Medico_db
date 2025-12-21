@@ -36,6 +36,13 @@ const EncountersPage = () => {
   const [total, setTotal] = useState(0);
   const [editingEncounterId, setEditingEncounterId] = useState(null);
 
+  // Filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
+
   useEffect(() => {
     const fetchEncounters = async () => {
       try {
@@ -180,7 +187,59 @@ const EncountersPage = () => {
         <button className="hp-primary-btn" onClick={beginCreate}>
           + New Encounter
         </button>
+        <button
+          className="hp-secondary-btn"
+          onClick={() => setShowFilters(!showFilters)}
+          style={{ marginLeft: "8px" }}
+        >
+          🔍 {showFilters ? "Hide Filters" : "Filters"}
+        </button>
       </div>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <div className="page-section" style={{ marginBottom: "20px", padding: "16px", background: "var(--hp-bg-soft, #334155)", borderRadius: "12px" }}>
+          <h4 style={{ marginBottom: "12px", color: "var(--hp-text-main)" }}>🔍 Advanced Filters</h4>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>Visit Date From</label>
+              <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>Visit Date To</label>
+              <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>Status</label>
+              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff", minWidth: "120px" }}>
+                <option value="">All</option>
+                <option value="Scheduled">Scheduled</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+                <option value="Discharged">Discharged</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>Department</label>
+              <select value={departmentFilter} onChange={(e) => { setDepartmentFilter(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff", minWidth: "150px" }}>
+                <option value="">All</option>
+                <option value="Emergency">Emergency</option>
+                <option value="Cardiology">Cardiology</option>
+                <option value="Orthopedics">Orthopedics</option>
+                <option value="Pediatrics">Pediatrics</option>
+                <option value="Oncology">Oncology</option>
+              </select>
+            </div>
+            <button className="hp-secondary-btn" onClick={() => { setDateFrom(""); setDateTo(""); setStatusFilter(""); setDepartmentFilter(""); setSearchTerm(""); setPage(0); }}>
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="page-grid">
         <div className="page-card">

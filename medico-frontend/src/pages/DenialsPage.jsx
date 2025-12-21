@@ -27,6 +27,12 @@ const DenialsPage = () => {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
 
+  // Filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [outcomeFilter, setOutcomeFilter] = useState("");
+
   useEffect(() => {
     const fetchDenials = async () => {
       try {
@@ -145,7 +151,42 @@ const DenialsPage = () => {
         >
           + New Denial
         </button>
+        <button className="hp-secondary-btn" onClick={() => setShowFilters(!showFilters)} style={{ marginLeft: "8px" }}>
+          🔍 {showFilters ? "Hide Filters" : "Filters"}
+        </button>
       </div>
+
+      {showFilters && (
+        <div className="page-section" style={{ marginBottom: "20px", padding: "16px", background: "var(--hp-bg-soft, #334155)", borderRadius: "12px" }}>
+          <h4 style={{ marginBottom: "12px", color: "var(--hp-text-main)" }}>🔍 Advanced Filters</h4>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>Denial Date From</label>
+              <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>Denial Date To</label>
+              <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", marginBottom: "4px", color: "var(--hp-text-soft)" }}>Final Outcome</label>
+              <select value={outcomeFilter} onChange={(e) => { setOutcomeFilter(e.target.value); setPage(0); }}
+                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #555", background: "#1e293b", color: "#fff", minWidth: "140px" }}>
+                <option value="">All</option>
+                <option value="Upheld">Upheld</option>
+                <option value="Overturned">Overturned</option>
+                <option value="Partial">Partial</option>
+                <option value="Pending">Pending</option>
+              </select>
+            </div>
+            <button className="hp-secondary-btn" onClick={() => { setDateFrom(""); setDateTo(""); setOutcomeFilter(""); setSearchTerm(""); setPage(0); }}>
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="page-grid">
         <div className="page-card">
@@ -167,12 +208,6 @@ const DenialsPage = () => {
         <div className="page-card">
           <h3>📈 Appeal Tracking</h3>
           <p>Monitor appeal status and outcomes.</p>
-          <button
-            className="hp-secondary-btn"
-            onClick={() => alert("Appeal analytics coming soon!")}
-          >
-            View Analytics
-          </button>
         </div>
       </div>
 

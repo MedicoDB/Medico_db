@@ -1,207 +1,219 @@
-# app/api/claims.py
+from flask import Blueprint, request, jsonify
+from ..models import ClaimsAndBillingModel, EncountersModel
+from mysql.connector import Error
 
-from flask import Blueprint, jsonify, request
-from ..db import get_conn
-from ..utils import generate_id, parse_datetime
+bp = Blueprint("claims", __name__, url_prefix="/api/claims")
 
-# 'claims_api' adında yeni bir blueprint oluşturuyoruz
-claims_bp = Blueprint('claims_api', __name__, url_prefix='/api/claims')
 
-# /api/claims/ adresine GET isteği
-@claims_bp.route('/', methods=['GET'])
-def get_all_claims():
-    limit = int(request.args.get("limit", 100))
-    offset = int(request.args.get("offset", 0))
-    search = request.args.get("search", "").strip()
+def _value_or_none(value):
+    return value.strip() if value and value.strip() else None
 
-    filters = ""
-    params = []
-    if search:
-        like = f"%{search}%"
-        filters = """
-            WHERE billing_id LIKE %s
-               OR patient_id LIKE %s
-               OR encounter_id LIKE %s
-               OR claim_status LIKE %s
-        """
-        params.extend([like, like, like, like])
 
-    data_sql = f"""
-        SELECT * FROM claims_and_billing
-        {filters}
-        ORDER BY claim_billing_date DESC
-        LIMIT %s OFFSET %s
-    """
-
-    count_sql = f"""
-        SELECT COUNT(*) AS total
-        FROM claims_and_billing
-        {filters}
-    """
-
-    summary_sql = """
-        SELECT 
-            SUM(CASE WHEN claim_status = 'Paid' THEN 1 ELSE 0 END) AS paid_count,
-            SUM(CASE WHEN claim_status != 'Paid' THEN 1 ELSE 0 END) AS unpaid_count,
-            COALESCE(SUM(billed_amount), 0) AS total_billed,
-            COALESCE(SUM(CASE WHEN claim_status = 'Paid' THEN billed_amount ELSE 0 END), 0) AS paid_billed,
-            COALESCE(SUM(CASE WHEN claim_status != 'Paid' THEN billed_amount ELSE 0 END), 0) AS unpaid_billed
-        FROM claims_and_billing
-    """
-
+def _safe_float(value):
     try:
-        with get_conn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                cur.execute(count_sql, params)
-                total = cur.fetchone()["total"]
+        return float(value)
+    except:
+        return None
 
-                cur.execute(data_sql, params + [limit, offset])
-                claims = cur.fetchall()
 
-                cur.execute(summary_sql)
-                summary = cur.fetchone()
+@bp.get("/")
+def list_claims():
+    """Get all claims with optional search, filters, sorting, and pagination."""
+    try:
+        limit = int(request.args.get("limit", 50))
+        page = int(request.args.get("page", 1))
+        search = request.args.get("q", "").strip() or None
+        sort_by = request.args.get("sort", "claim_billing_date")
+        direction = request.args.get("direction", "desc").lower()
 
-                return jsonify({"data": claims, "total": total, "summary": summary})
+        filters = {
+            'billing_id': _value_or_none(request.args.get('billing_id')),
+            'encounter_id': _value_or_none(request.args.get('encounter_id')),
+            'claim_status': _value_or_none(request.args.get('claim_status')),
+            'billed_amount_min': _safe_float(request.args.get('billed_amount_min')),
+            'billed_amount_max': _safe_float(request.args.get('billed_amount_max')),
+            'claim_date_from': _value_or_none(request.args.get('claim_date_from')),
+            'claim_date_to': _value_or_none(request.args.get('claim_date_to')),
+            'payment_method': _value_or_none(request.args.get('payment_method'))
+        }
+
+        result = ClaimsAndBillingModel.get_all(
+            limit=limit,
+            page=page,
+            search=search,
+            filters=filters,
+            sort_by=sort_by,
+            sort_dir=direction
+        )
+        return jsonify(result)
+    except Error as e:
+        import traceback
+        print(f"Claims API MySQL Error: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        import traceback
+        print(f"Claims API Exception: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/<billing_id>")
+def get_claim(billing_id):
+    """Get a single claim by billing_id."""
+    try:
+        claim = ClaimsAndBillingModel.get_by_id(billing_id)
+        if not claim:
+            return jsonify({"error": "Claim not found"}), 404
+        return jsonify(claim)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-@claims_bp.route('/', methods=['POST'])
+@bp.get("/by-claim-id/<claim_id>")
+def get_claim_by_claim_id(claim_id):
+    """Get a single claim by claim_id (not billing_id)."""
+    try:
+        from ..db import get_db_connection
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute("""
+            SELECT cb.*, p.first_name, p.last_name
+            FROM claims_and_billing cb
+            LEFT JOIN patients p ON cb.patient_id = p.patient_id
+            WHERE cb.claim_id = %s
+            LIMIT 1
+        """, (claim_id,))
+        
+        claim = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not claim:
+            return jsonify({"error": "Claim not found"}), 404
+        return jsonify(claim)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.post("/")
 def create_claim():
-    data = request.get_json(silent=True) or {}
-    patient_id = data.get("patient_id")
-    encounter_id = data.get("encounter_id")
-
-    if not patient_id or not encounter_id:
-        return jsonify({"error": "patient_id and encounter_id are required"}), 400
-
-    billing_id = data.get("billing_id") or generate_id("BILL")
-    claim_id = data.get("claim_id") or generate_id("CLM")
-    billing_date = parse_datetime(data.get("claim_billing_date"))
-
-    payload = (
-        billing_id,
-        patient_id,
-        encounter_id,
-        data.get("insurance_provider"),
-        data.get("payment_method"),
-        claim_id,
-        billing_date,
-        data.get("billed_amount", 0),
-        data.get("paid_amount", 0),
-        data.get("claim_status", "Pending"),
-        data.get("denial_reason"),
-    )
-
+    """Create a new claim."""
     try:
-        with get_conn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                cur.execute(
-                    """
-                    INSERT INTO claims_and_billing (
-                        billing_id, patient_id, encounter_id, insurance_provider, payment_method,
-                        claim_id, claim_billing_date, billed_amount, paid_amount, claim_status,
-                        denial_reason
-                    ) VALUES (
-                        %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s,
-                        %s
-                    )
-                    """,
-                    payload,
-                )
-                conn.commit()
-                cur.execute(
-                    "SELECT * FROM claims_and_billing WHERE billing_id = %s",
-                    (billing_id,),
-                )
-                claim = cur.fetchone()
-                return jsonify(claim), 201
-    except Exception as e:
+        data = request.get_json() or {}
+        # Clean up data - convert empty strings to None
+        required_fields = ['encounter_id', 'claim_billing_date', 'billed_amount', 'claim_status']
+        for key, value in data.items():
+            if value == "" and key not in required_fields:
+                data[key] = None
+
+        # Convert billed_amount to float
+        if 'billed_amount' in data:
+            try:
+                data['billed_amount'] = float(data['billed_amount']) if data['billed_amount'] else 0.0
+            except:
+                data['billed_amount'] = 0.0
+
+        billing_id = ClaimsAndBillingModel.add(data)
+        claim = ClaimsAndBillingModel.get_by_id(billing_id)
+        return jsonify(claim), 201
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Error as e:
         return jsonify({"error": str(e)}), 400
-
-
-@claims_bp.route('/patient/<patient_id>', methods=['GET'])
-def get_claims_by_patient(patient_id):
-    try:
-        with get_conn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                # claims_and_billing tablosunda patient_id sütunu var
-                query = "SELECT * FROM claims_and_billing WHERE patient_id = %s;"
-                cur.execute(query, (patient_id,))
-                claims = cur.fetchall() # Bir hastanın birden çok faturası olabilir -> fetchall
-                return jsonify(claims)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-@claims_bp.route('/<billing_id>', methods=['GET'])
-def get_claim_by_id(billing_id):
-    try:
-        with get_conn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                # Tablonun Primary Key'i: billing_id
-                query = "SELECT * FROM claims_and_billing WHERE billing_id = %s;"
-                cur.execute(query, (billing_id,))
-                claim = cur.fetchone() # Tek kayıt -> fetchone
-                
-                if claim:
-                    return jsonify(claim)
-                else:
-                    return jsonify({"error": "Claim not found"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@claims_bp.route('/<billing_id>', methods=['DELETE'])
-def delete_claim(billing_id):
-    try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM claims_and_billing WHERE billing_id = %s", (billing_id,))
-                conn.commit()
-                if cur.rowcount == 0:
-                    return jsonify({"error": "Claim not found"}), 404
-                return jsonify({"message": "Claim deleted"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-
-@claims_bp.route('/<billing_id>', methods=['PUT'])
+@bp.put("/<billing_id>")
 def update_claim(billing_id):
-    data = request.get_json(silent=True) or {}
-    allowed_fields = {
-        "patient_id": lambda v: v,
-        "encounter_id": lambda v: v,
-        "insurance_provider": lambda v: v,
-        "payment_method": lambda v: v,
-        "claim_id": lambda v: v,
-        "claim_billing_date": parse_datetime,
-        "billed_amount": lambda v: float(v) if v is not None else None,
-        "paid_amount": lambda v: float(v) if v is not None else None,
-        "claim_status": lambda v: v,
-        "denial_reason": lambda v: v,
-    }
-
-    updates = []
-    values = []
-    for field, parser in allowed_fields.items():
-        if field in data:
-            updates.append(f"{field} = %s")
-            values.append(parser(data[field]))
-
-    if not updates:
-        return jsonify({"error": "No valid fields to update"}), 400
-
+    """Update an existing claim."""
     try:
-        with get_conn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                sql = f"UPDATE claims_and_billing SET {', '.join(updates)} WHERE billing_id = %s"
-                cur.execute(sql, values + [billing_id])
-                conn.commit()
-                if cur.rowcount == 0:
-                    return jsonify({"error": "Claim not found"}), 404
-                cur.execute("SELECT * FROM claims_and_billing WHERE billing_id = %s", (billing_id,))
-                return jsonify(cur.fetchone())
-    except Exception as e:
+        data = request.get_json() or {}
+        # Clean up data - convert empty strings to None
+        required_fields = ['encounter_id', 'claim_billing_date', 'billed_amount', 'claim_status']
+        for key, value in data.items():
+            if value == "" and key not in required_fields:
+                data[key] = None
+
+        # Convert billed_amount to float if present
+        if 'billed_amount' in data and data['billed_amount']:
+            try:
+                data['billed_amount'] = float(data['billed_amount'])
+            except:
+                pass
+
+        success = ClaimsAndBillingModel.update(billing_id, data)
+        if not success:
+            return jsonify({"error": "Claim not found or no changes made"}), 404
+
+        claim = ClaimsAndBillingModel.get_by_id(billing_id)
+        return jsonify(claim)
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Error as e:
         return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.delete("/<billing_id>")
+def delete_claim(billing_id):
+    """Delete a claim."""
+    try:
+        success = ClaimsAndBillingModel.delete(billing_id)
+        if not success:
+            return jsonify({"error": "Claim not found"}), 404
+        return jsonify({"message": "Claim deleted successfully"}), 200
+    except Error as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.post("/sync/<encounter_id>")
+def sync_claim_amount(encounter_id):
+    """Sync claim amount from procedures and medications for an encounter."""
+    try:
+        success = ClaimsAndBillingModel.sync_claim_amount(encounter_id)
+        if success:
+            return jsonify({"message": "Claim amount synced successfully"}), 200
+        else:
+            return jsonify({"error": "Failed to sync claim amount"}), 500
+    except Error as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/statistics")
+def get_statistics():
+    """Get claim statistics grouped by status."""
+    try:
+        stats = ClaimsAndBillingModel.get_claim_statistics()
+        return jsonify(stats)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/options/encounters")
+def get_encounters_options():
+    """Get encounters for dropdown options with optional search using SQL LIKE."""
+    try:
+        search = request.args.get("search", "").strip() or None
+        limit = int(request.args.get("limit", 50))
+        
+        result = EncountersModel.get_all(limit=limit, page=1, search=search)
+        encounters = result.get('data', []) if isinstance(result, dict) else []
+        return jsonify(encounters)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

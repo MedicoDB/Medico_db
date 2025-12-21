@@ -1,178 +1,179 @@
 from flask import Blueprint, request, jsonify
-from ..db import get_conn
-from ..utils import generate_id, parse_date
+from ..models import MedicationsModel, EncountersModel, ProvidersModel
+from mysql.connector import Error
 
-bp = Blueprint("medications", __name__)
+bp = Blueprint("medications", __name__, url_prefix="/api/medications")
+
+
+def _value_or_none(value):
+    return value.strip() if value and value.strip() else None
+
+
+def _safe_float(value):
+    try:
+        return float(value)
+    except:
+        return None
+
 
 @bp.get("/")
 def list_medications():
-    limit = int(request.args.get("limit", 100))
-    offset = int(request.args.get("offset", 0))
-    search = request.args.get("search", "").strip()
-    
-    filters = ""
-    params = []
-    if search:
-        like = f"%{search}%"
-        filters = """
-            WHERE m.drug_name LIKE %s
-               OR p.first_name LIKE %s
-               OR p.last_name LIKE %s
-               OR m.medication_id LIKE %s
-        """
-        params.extend([like, like, like, like])
-    
-    data_sql = f"""
-        SELECT m.medication_id, m.encounter_id, m.drug_name, m.dosage, 
-               m.route, m.frequency, m.duration, m.prescribed_date, 
-               m.prescriber_id, m.cost, p.first_name, p.last_name,
-               prov.name as prescriber_name
-        FROM medications m
-        LEFT JOIN encounters e ON m.encounter_id = e.encounter_id
-        LEFT JOIN patients p ON e.patient_id = p.patient_id
-        LEFT JOIN providers prov ON m.prescriber_id = prov.provider_id
-        {filters}
-        ORDER BY m.prescribed_date DESC
-        LIMIT %s OFFSET %s
-    """
-
-    count_sql = f"""
-        SELECT COUNT(*) AS total
-        FROM medications m
-        LEFT JOIN encounters e ON m.encounter_id = e.encounter_id
-        LEFT JOIN patients p ON e.patient_id = p.patient_id
-        {filters}
-    """
-    
+    """Get all medications with optional search, filters, sorting, and pagination."""
     try:
-        with get_conn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                cur.execute(count_sql, params)
-                total = cur.fetchone()["total"]
+        limit = int(request.args.get("limit", 50))
+        page = int(request.args.get("page", 1))
+        search = request.args.get("q", "").strip() or None
+        sort_by = request.args.get("sort", "prescribed_date")
+        direction = request.args.get("direction", "desc").lower()
 
-                cur.execute(data_sql, params + [limit, offset])
-                medications = cur.fetchall()
-                return jsonify({"data": medications, "total": total})
+        filters = {
+            'medication_id': _value_or_none(request.args.get('medication_id')),
+            'encounter_id': _value_or_none(request.args.get('encounter_id')),
+            'drug_name': _value_or_none(request.args.get('drug_name')),
+            'prescriber_id': _value_or_none(request.args.get('prescriber_id')),
+            'prescribed_date_from': _value_or_none(request.args.get('prescribed_date_from')),
+            'prescribed_date_to': _value_or_none(request.args.get('prescribed_date_to')),
+            'cost_min': _safe_float(request.args.get('cost_min')),
+            'cost_max': _safe_float(request.args.get('cost_max')),
+        }
+
+        result = MedicationsModel.get_all(
+            limit=limit,
+            page=page,
+            search=search,
+            filters=filters,
+            sort_by=sort_by,
+            sort_dir=direction
+        )
+        return jsonify(result)
+    except Error as e:
+        import traceback
+        print(f"Medications API MySQL Error: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        import traceback
+        print(f"Medications API Exception: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/<medication_id>")
+def get_medication(medication_id):
+    """Get a single medication by ID."""
+    try:
+        medication = MedicationsModel.get_by_id(medication_id)
+        if not medication:
+            return jsonify({"error": "Medication not found"}), 404
+        return jsonify(medication)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @bp.post("/")
 def create_medication():
-    data = request.get_json(silent=True) or {}
-    encounter_id = data.get("encounter_id")
-    if not encounter_id:
-        return jsonify({"error": "encounter_id is required"}), 400
-
-    medication_id = data.get("medication_id") or generate_id("MED")
-    prescribed_date = parse_date(data.get("prescribed_date"))
-
-    payload = (
-        medication_id,
-        encounter_id,
-        data.get("drug_name"),
-        data.get("dosage"),
-        data.get("route"),
-        data.get("frequency"),
-        data.get("duration"),
-        prescribed_date,
-        data.get("prescriber_id"),
-        data.get("cost", 0),
-    )
-
+    """Create a new medication."""
     try:
-        with get_conn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                cur.execute(
-                    """
-                    INSERT INTO medications (
-                        medication_id, encounter_id, drug_name, dosage, route,
-                        frequency, duration, prescribed_date, prescriber_id, cost
-                    ) VALUES (
-                        %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s
-                    )
-                    """,
-                    payload,
-                )
-                conn.commit()
-                cur.execute(
-                    """
-                    SELECT m.*, p.first_name, p.last_name
-                    FROM medications m
-                    LEFT JOIN encounters e ON m.encounter_id = e.encounter_id
-                    LEFT JOIN patients p ON e.patient_id = p.patient_id
-                    WHERE m.medication_id = %s
-                    """,
-                    (medication_id,),
-                )
-                created = cur.fetchone()
-                return jsonify(created), 201
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        data = request.get_json() or {}
+        # Clean up data - convert empty strings to None
+        required_fields = ['encounter_id', 'drug_name', 'prescribed_date', 'prescriber_id']
+        for key, value in data.items():
+            if value == "" and key not in required_fields:
+                data[key] = None
 
+        # Convert cost to float
+        if 'cost' in data:
+            try:
+                data['cost'] = float(data['cost']) if data['cost'] else 0.0
+            except:
+                data['cost'] = 0.0
 
-@bp.delete("/<medication_id>")
-def delete_medication(medication_id):
-    try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM medications WHERE medication_id = %s", (medication_id,))
-                conn.commit()
-                if cur.rowcount == 0:
-                    return jsonify({"error": "Medication not found"}), 404
-                return jsonify({"message": "Medication deleted"}), 200
-    except Exception as e:
+        medication_id = MedicationsModel.add(data)
+        medication = MedicationsModel.get_by_id(medication_id)
+        return jsonify(medication), 201
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Error as e:
         return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @bp.put("/<medication_id>")
 def update_medication(medication_id):
-    data = request.get_json(silent=True) or {}
-    allowed_fields = {
-        "encounter_id": lambda v: v,
-        "drug_name": lambda v: v,
-        "dosage": lambda v: v,
-        "route": lambda v: v,
-        "frequency": lambda v: v,
-        "duration": lambda v: v,
-        "prescribed_date": parse_date,
-        "prescriber_id": lambda v: v,
-        "cost": lambda v: float(v) if v is not None else None,
-    }
-
-    updates = []
-    values = []
-    for field, parser in allowed_fields.items():
-        if field in data:
-            updates.append(f"{field} = %s")
-            values.append(parser(data[field]))
-
-    if not updates:
-        return jsonify({"error": "No valid fields to update"}), 400
-
+    """Update an existing medication."""
     try:
-        with get_conn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                sql = f"UPDATE medications SET {', '.join(updates)} WHERE medication_id = %s"
-                cur.execute(sql, values + [medication_id])
-                conn.commit()
-                if cur.rowcount == 0:
-                    return jsonify({"error": "Medication not found"}), 404
-                cur.execute(
-                    """
-                    SELECT m.medication_id, m.encounter_id, m.drug_name, m.dosage, 
-                           m.route, m.frequency, m.duration, m.prescribed_date, 
-                           m.prescriber_id, m.cost, p.first_name, p.last_name,
-                           prov.name as prescriber_name
-                    FROM medications m
-                    LEFT JOIN encounters e ON m.encounter_id = e.encounter_id
-                    LEFT JOIN patients p ON e.patient_id = p.patient_id
-                    LEFT JOIN providers prov ON m.prescriber_id = prov.provider_id
-                    WHERE m.medication_id = %s
-                    """,
-                    (medication_id,),
-                )
-                return jsonify(cur.fetchone())
-    except Exception as e:
+        data = request.get_json() or {}
+        # Clean up data - convert empty strings to None
+        required_fields = ['encounter_id', 'drug_name', 'prescribed_date', 'prescriber_id']
+        for key, value in data.items():
+            if value == "" and key not in required_fields:
+                data[key] = None
+
+        # Convert cost to float if present
+        if 'cost' in data and data['cost']:
+            try:
+                data['cost'] = float(data['cost'])
+            except:
+                pass
+
+        success = MedicationsModel.update(medication_id, data)
+        if not success:
+            return jsonify({"error": "Medication not found or no changes made"}), 404
+
+        medication = MedicationsModel.get_by_id(medication_id)
+        return jsonify(medication)
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Error as e:
         return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.delete("/<medication_id>")
+def delete_medication(medication_id):
+    """Delete a medication."""
+    try:
+        success = MedicationsModel.delete(medication_id)
+        if not success:
+            return jsonify({"error": "Medication not found"}), 404
+        return jsonify({"message": "Medication deleted successfully"}), 200
+    except Error as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/options/encounters")
+def get_encounters_options():
+    """Get encounters for dropdown options with optional search using SQL LIKE."""
+    try:
+        search = request.args.get("search", "").strip() or None
+        limit = int(request.args.get("limit", 50))
+        
+        result = EncountersModel.get_all(limit=limit, page=1, search=search)
+        encounters = result.get('data', []) if isinstance(result, dict) else []
+        return jsonify(encounters)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/options/prescribers")
+def get_prescribers_options():
+    """Get providers (prescribers) for dropdown options with optional search using SQL LIKE."""
+    try:
+        search = request.args.get("search", "").strip() or None
+        limit = int(request.args.get("limit", 50))
+        
+        providers = ProvidersModel.get_all_simple(limit=limit, search=search)
+        return jsonify(providers)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+

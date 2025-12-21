@@ -1,188 +1,263 @@
-from datetime import date
 from flask import Blueprint, request, jsonify
-from ..db import get_conn
-from ..utils import generate_id, parse_date
+from ..models import EncountersModel, PatientsModel, ProvidersModel
+from ..db import get_db_connection
+from mysql.connector import Error
 
 bp = Blueprint("encounters", __name__)
 
+
+def _safe_int(value):
+    try:
+        return int(value)
+    except:
+        return None
+
+
+def _value_or_none(value):
+    return value.strip() if value and value.strip() else None
+
+
+def _bool_from_request(value):
+    if value is None or value == "":
+        return None
+    return value.lower() in ("1", "true", "yes", "y")
+
+
 @bp.get("/")
 def list_encounters():
-    limit = int(request.args.get("limit", 100))
-    offset = int(request.args.get("offset", 0))
-    search = request.args.get("search", "").strip()
-
-    search_clause = ""
-    params = []
-    if search:
-        like = f"%{search}%"
-        search_clause = """
-            WHERE e.encounter_id LIKE %s
-               OR p.first_name LIKE %s
-               OR p.last_name LIKE %s
-               OR e.diagnosis_code LIKE %s
-        """
-        params.extend([like, like, like, like])
-
-    data_sql = f"""
-        SELECT e.encounter_id, e.patient_id, e.provider_id, e.visit_date, 
-               e.visit_type, e.department, e.reason_for_visit, e.diagnosis_code,
-               e.admission_type, e.discharge_date, e.length_of_stay, e.status,
-               p.first_name, p.last_name, pr.name as provider_name
-        FROM encounters e
-        LEFT JOIN patients p ON e.patient_id = p.patient_id
-        LEFT JOIN providers pr ON e.provider_id = pr.provider_id
-        {search_clause}
-        ORDER BY e.visit_date DESC
-        LIMIT %s OFFSET %s
-    """
-
-    count_sql = f"""
-        SELECT COUNT(*) AS total
-        FROM encounters e
-        LEFT JOIN patients p ON e.patient_id = p.patient_id
-        {search_clause}
-    """
-    
+    """Get all encounters with optional search, filters, sorting, and pagination."""
     try:
-        with get_conn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                cur.execute(count_sql, params)
-                total = cur.fetchone()["total"]
+        limit = int(request.args.get("limit", 50))
+        page = int(request.args.get("page", 1))
+        search = request.args.get("q", "").strip() or None
+        sort_by = request.args.get("sort", "visit_date")
+        direction = request.args.get("direction", "desc").lower()
 
-                cur.execute(data_sql, params + [limit, offset])
-                encounters = cur.fetchall()
-                return jsonify({"data": encounters, "total": total})
+        filters = {
+            'encounter_id': _value_or_none(request.args.get('encounter_id')),
+            'patient_id': _value_or_none(request.args.get('patient_id')),
+            'provider_id': _value_or_none(request.args.get('provider_id')),
+            'patient_name': _value_or_none(request.args.get('patient_name')),
+            'provider_name': _value_or_none(request.args.get('provider_name')),
+            'department': _value_or_none(request.args.get('department')),
+            'status': _value_or_none(request.args.get('status')),
+            'visit_from': _value_or_none(request.args.get('visit_from')),
+            'readmitted_flag': _bool_from_request(request.args.get('readmitted_flag'))
+        }
+
+        result = EncountersModel.get_all(
+            limit=limit,
+            page=page,
+            search=search,
+            filters=filters,
+            sort_by=sort_by,
+            sort_dir=direction
+        )
+        return jsonify(result)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/<encounter_id>")
+def get_encounter(encounter_id):
+    """Get a single encounter by ID."""
+    try:
+        encounter = EncountersModel.get_by_id(encounter_id)
+        if not encounter:
+            return jsonify({"error": "Encounter not found"}), 404
+        return jsonify(encounter)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @bp.post("/")
 def create_encounter():
-    data = request.get_json(silent=True) or {}
-    patient_id = data.get("patient_id")
-    provider_id = data.get("provider_id")
-
-    if not patient_id or not provider_id:
-        return jsonify({"error": "patient_id and provider_id are required"}), 400
-
-    encounter_id = data.get("encounter_id") or generate_id("ENC")
-    visit_date = parse_date(data.get("visit_date")) or date.today()
-    discharge_date = parse_date(data.get("discharge_date"))
-
-    payload = (
-        encounter_id,
-        patient_id,
-        provider_id,
-        visit_date,
-        data.get("visit_type"),
-        data.get("department"),
-        data.get("reason_for_visit"),
-        data.get("diagnosis_code"),
-        data.get("admission_type"),
-        discharge_date,
-        data.get("length_of_stay", 0),
-        data.get("status", "Completed"),
-        bool(data.get("readmitted_flag", False)),
-    )
-
+    """Create a new encounter."""
     try:
-        with get_conn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                cur.execute(
-                    """
-                    INSERT INTO encounters (
-                        encounter_id, patient_id, provider_id, visit_date,
-                        visit_type, department, reason_for_visit, diagnosis_code,
-                        admission_type, discharge_date, length_of_stay, status,
-                        readmitted_flag
-                    ) VALUES (
-                        %s, %s, %s, %s,
-                        %s, %s, %s, %s,
-                        %s, %s, %s, %s,
-                        %s
-                    )
-                    """,
-                    payload,
-                )
-                conn.commit()
-                cur.execute(
-                    """
-                    SELECT e.*, p.first_name, p.last_name
-                    FROM encounters e
-                    LEFT JOIN patients p ON e.patient_id = p.patient_id
-                    WHERE e.encounter_id = %s
-                    """,
-                    (encounter_id,),
-                )
-                created = cur.fetchone()
-                return jsonify(created), 201
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        data = request.get_json() or {}
+        # Clean up data - convert empty strings to None
+        # BUT preserve required fields (patient_id, provider_id, visit_date should not be converted to None)
+        required_fields = ['patient_id', 'provider_id', 'visit_date']
+        for key, value in data.items():
+            if value == "" and key not in required_fields:
+                data[key] = None
 
+        # Handle boolean field
+        if 'readmitted_flag' in data:
+            data['readmitted_flag'] = bool(data['readmitted_flag'])
 
-@bp.delete("/<encounter_id>")
-def delete_encounter(encounter_id):
-    try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM encounters WHERE encounter_id = %s", (encounter_id,))
-                conn.commit()
-                if cur.rowcount == 0:
-                    return jsonify({"error": "Encounter not found"}), 404
-                return jsonify({"message": "Encounter deleted"}), 200
-    except Exception as e:
+        encounter_id = EncountersModel.add(data)
+        encounter = EncountersModel.get_by_id(encounter_id)
+        return jsonify(encounter), 201
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Error as e:
         return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @bp.put("/<encounter_id>")
 def update_encounter(encounter_id):
-    data = request.get_json(silent=True) or {}
-    allowed_fields = {
-        "patient_id": lambda v: v,
-        "provider_id": lambda v: v,
-        "visit_date": parse_date,
-        "visit_type": lambda v: v,
-        "department": lambda v: v,
-        "reason_for_visit": lambda v: v,
-        "diagnosis_code": lambda v: v,
-        "admission_type": lambda v: v,
-        "discharge_date": parse_date,
-        "length_of_stay": lambda v: int(v) if v is not None else None,
-        "status": lambda v: v,
-        "readmitted_flag": lambda v: bool(v),
-    }
-
-    updates = []
-    values = []
-    for field, parser in allowed_fields.items():
-        if field in data:
-            updates.append(f"{field} = %s")
-            values.append(parser(data[field]))
-
-    if not updates:
-        return jsonify({"error": "No valid fields to update"}), 400
-
+    """Update an existing encounter. Department is auto-filled from provider if not provided."""
     try:
-        with get_conn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                sql = f"UPDATE encounters SET {', '.join(updates)} WHERE encounter_id = %s"
-                cur.execute(sql, values + [encounter_id])
-                conn.commit()
-                if cur.rowcount == 0:
-                    return jsonify({"error": "Encounter not found"}), 404
-                cur.execute(
-                    """
-                    SELECT e.encounter_id, e.patient_id, e.provider_id, e.visit_date, 
-                           e.visit_type, e.department, e.reason_for_visit, e.diagnosis_code,
-                           e.admission_type, e.discharge_date, e.length_of_stay, e.status,
-                           p.first_name, p.last_name, pr.name as provider_name
-                    FROM encounters e
-                    LEFT JOIN patients p ON e.patient_id = p.patient_id
-                    LEFT JOIN providers pr ON e.provider_id = pr.provider_id
-                    WHERE e.encounter_id = %s
-                    """,
-                    (encounter_id,),
-                )
-                return jsonify(cur.fetchone())
-    except Exception as e:
+        data = request.get_json() or {}
+        # Clean up data - convert empty strings to None
+        # BUT preserve required fields for validation
+        required_fields = ['patient_id', 'provider_id', 'visit_date']
+        for key, value in data.items():
+            if value == "" and key not in required_fields:
+                data[key] = None
+
+        # Handle boolean field
+        if 'readmitted_flag' in data:
+            data['readmitted_flag'] = bool(data['readmitted_flag'])
+
+        success = EncountersModel.update(encounter_id, data)
+        if not success:
+            return jsonify({"error": "Encounter not found or no changes made"}), 404
+
+        encounter = EncountersModel.get_by_id(encounter_id)
+        return jsonify(encounter)
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Error as e:
         return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.delete("/<encounter_id>")
+def delete_encounter(encounter_id):
+    """Delete an encounter."""
+    try:
+        success = EncountersModel.delete(encounter_id)
+        if not success:
+            return jsonify({"error": "Encounter not found"}), 404
+        return jsonify({"message": "Encounter deleted successfully"}), 200
+    except Error as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/options/patients")
+def get_patients_options():
+    """Get patients for dropdown options with optional search using SQL LIKE."""
+    try:
+        search = request.args.get("search", "").strip() or None
+        limit = int(request.args.get("limit", 50))
+        
+        result = PatientsModel.get_all(limit=limit, page=1, search=search)
+        # Handle both old format (array) and new format (object)
+        patients = result if isinstance(result, list) else (result.get('data', []) if isinstance(result, dict) else [])
+        return jsonify(patients)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/options/providers")
+def get_providers_options():
+    """Get providers for dropdown options with optional search using SQL LIKE."""
+    try:
+        search = request.args.get("search", "").strip() or None
+        limit = int(request.args.get("limit", 50))
+        
+        providers = ProvidersModel.get_all_simple(limit=limit, search=search)
+        return jsonify(providers)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/options/departments")
+def get_departments_options():
+    """Get all departments for dropdown options."""
+    try:
+        departments = ProvidersModel.get_departments()
+        return jsonify(departments)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/<encounter_id>/related")
+def get_encounter_related(encounter_id):
+    """Get all related data for an encounter: medications, procedures, diagnoses, lab_tests, claims."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        related_data = {
+            "medications": [],
+            "procedures": [],
+            "diagnoses": [],
+            "lab_tests": [],
+            "claims": []
+        }
+        
+        # Get medications
+        cursor.execute("""
+            SELECT m.*, p.name as prescriber_name
+            FROM medications m
+            LEFT JOIN providers p ON m.prescriber_id = p.provider_id
+            WHERE m.encounter_id = %s
+            ORDER BY m.prescribed_date DESC
+        """, (encounter_id,))
+        related_data["medications"] = cursor.fetchall()
+        
+        # Get procedures
+        cursor.execute("""
+            SELECT pr.*, p.name as provider_name
+            FROM procedures pr
+            LEFT JOIN providers p ON pr.provider_id = p.provider_id
+            WHERE pr.encounter_id = %s
+            ORDER BY pr.procedure_date DESC
+        """, (encounter_id,))
+        related_data["procedures"] = cursor.fetchall()
+        
+        # Get diagnoses
+        cursor.execute("""
+            SELECT *
+            FROM diagnoses
+            WHERE encounter_id = %s
+            ORDER BY primary_flag DESC, diagnosis_id
+        """, (encounter_id,))
+        related_data["diagnoses"] = cursor.fetchall()
+        
+        # Get lab_tests
+        cursor.execute("""
+            SELECT *
+            FROM lab_tests
+            WHERE encounter_id = %s
+            ORDER BY test_date DESC
+        """, (encounter_id,))
+        related_data["lab_tests"] = cursor.fetchall()
+        
+        # Get claims
+        cursor.execute("""
+            SELECT cb.*, p.first_name, p.last_name
+            FROM claims_and_billing cb
+            LEFT JOIN patients p ON cb.patient_id = p.patient_id
+            WHERE cb.encounter_id = %s
+            ORDER BY cb.claim_billing_date DESC
+        """, (encounter_id,))
+        related_data["claims"] = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify(related_data)
+    except Error as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+

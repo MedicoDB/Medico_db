@@ -31,9 +31,8 @@ const SharedLayout = ({
 
           <Link to="/">
             <button
-              className={`hp-nav-item ${
-                location.pathname === "/" ? "hp-nav-item--active" : ""
-              }`}
+              className={`hp-nav-item ${location.pathname === "/" ? "hp-nav-item--active" : ""
+                }`}
             >
               Dashboard
             </button>
@@ -41,11 +40,10 @@ const SharedLayout = ({
 
           <Link to="/patients">
             <button
-              className={`hp-nav-item ${
-                activePage === "patients" || location.pathname === "/patients"
+              className={`hp-nav-item ${activePage === "patients" || location.pathname === "/patients"
                   ? "hp-nav-item--active"
                   : ""
-              }`}
+                }`}
             >
               Patients
             </button>
@@ -53,11 +51,10 @@ const SharedLayout = ({
 
           <Link to="/encounters">
             <button
-              className={`hp-nav-item ${
-                activePage === "encounters" || location.pathname === "/encounters"
+              className={`hp-nav-item ${activePage === "encounters" || location.pathname === "/encounters"
                   ? "hp-nav-item--active"
                   : ""
-              }`}
+                }`}
             >
               Encounters
             </button>
@@ -65,11 +62,10 @@ const SharedLayout = ({
 
           <Link to="/procedures">
             <button
-              className={`hp-nav-item ${
-                activePage === "procedures" || location.pathname === "/procedures"
+              className={`hp-nav-item ${activePage === "procedures" || location.pathname === "/procedures"
                   ? "hp-nav-item--active"
                   : ""
-              }`}
+                }`}
             >
               Procedures
             </button>
@@ -77,13 +73,69 @@ const SharedLayout = ({
 
           <Link to="/medications">
             <button
-              className={`hp-nav-item ${
-                activePage === "medications" || location.pathname === "/medications"
+              className={`hp-nav-item ${activePage === "medications" || location.pathname === "/medications"
                   ? "hp-nav-item--active"
                   : ""
-              }`}
+                }`}
             >
               Medications
+            </button>
+          </Link>
+
+          <Link to="/diagnoses">
+            <button
+              className={`hp-nav-item ${activePage === "diagnoses" || location.pathname === "/diagnoses"
+                  ? "hp-nav-item--active"
+                  : ""
+                }`}
+            >
+              Diagnoses
+            </button>
+          </Link>
+
+          <Link to="/lab-tests">
+            <button
+              className={`hp-nav-item ${activePage === "labtests" || location.pathname === "/lab-tests"
+                  ? "hp-nav-item--active"
+                  : ""
+                }`}
+            >
+              Lab Tests
+            </button>
+          </Link>
+
+          <p className="hp-nav-title hp-nav-title--secondary">Staff & Insurance</p>
+
+          <Link to="/providers">
+            <button
+              className={`hp-nav-item ${activePage === "providers" || location.pathname === "/providers"
+                  ? "hp-nav-item--active"
+                  : ""
+                }`}
+            >
+              Providers
+            </button>
+          </Link>
+
+          <Link to="/insurers">
+            <button
+              className={`hp-nav-item ${activePage === "insurers" || location.pathname === "/insurers"
+                  ? "hp-nav-item--active"
+                  : ""
+                }`}
+            >
+              Insurers
+            </button>
+          </Link>
+
+          <Link to="/department-heads">
+            <button
+              className={`hp-nav-item ${activePage === "departmentheads" || location.pathname === "/department-heads"
+                  ? "hp-nav-item--active"
+                  : ""
+                }`}
+            >
+              Dept. Heads
             </button>
           </Link>
 
@@ -91,9 +143,8 @@ const SharedLayout = ({
 
           <Link to="/billing">
             <button
-              className={`hp-nav-item ${
-                location.pathname === "/billing" ? "hp-nav-item--active" : ""
-              }`}
+              className={`hp-nav-item ${location.pathname === "/billing" ? "hp-nav-item--active" : ""
+                }`}
             >
               Billing & Claims
             </button>
@@ -101,9 +152,8 @@ const SharedLayout = ({
 
           <Link to="/denials">
             <button
-              className={`hp-nav-item ${
-                location.pathname === "/denials" ? "hp-nav-item--active" : ""
-              }`}
+              className={`hp-nav-item ${location.pathname === "/denials" ? "hp-nav-item--active" : ""
+                }`}
             >
               Denials
             </button>
@@ -111,20 +161,15 @@ const SharedLayout = ({
 
           <Link to="/reports">
             <button
-              className={`hp-nav-item ${
-                location.pathname === "/reports" ? "hp-nav-item--active" : ""
-              }`}
+              className={`hp-nav-item ${location.pathname === "/reports" ? "hp-nav-item--active" : ""
+                }`}
             >
               Reports
             </button>
           </Link>
         </nav>
 
-        <div className="hp-sidebar-footer">
-          <p className="hp-footer-title">Logged in as</p>
-          <p className="hp-footer-name">Furkan İslamoğlu</p>
-          <p className="hp-footer-role">Frontend Lead</p>
-        </div>
+
       </aside>
 
       {/* Main Section */}
@@ -146,7 +191,7 @@ const SharedLayout = ({
                 className="hp-search"
                 placeholder="Search..."
                 value={searchValue}
-                onChange={onSearchChange || (() => {})}
+                onChange={onSearchChange || (() => { })}
               />
             )}
 

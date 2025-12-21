@@ -84,10 +84,36 @@ const HomePage = () => {
             <button className="hp-nav-item">Medications</button>
           </Link>
 
+          <Link to="/diagnoses">
+            <button className="hp-nav-item">Diagnoses</button>
+          </Link>
+
+          <Link to="/lab-tests">
+            <button className="hp-nav-item">Lab Tests</button>
+          </Link>
+
+          <p className="hp-nav-title hp-nav-title--secondary">Staff & Insurance</p>
+
+          <Link to="/providers">
+            <button className="hp-nav-item">Providers</button>
+          </Link>
+
+          <Link to="/insurers">
+            <button className="hp-nav-item">Insurers</button>
+          </Link>
+
+          <Link to="/department-heads">
+            <button className="hp-nav-item">Dept. Heads</button>
+          </Link>
+
           <p className="hp-nav-title hp-nav-title--secondary">Analytics</p>
 
           <Link to="/billing">
             <button className="hp-nav-item">Billing & Claims</button>
+          </Link>
+
+          <Link to="/denials">
+            <button className="hp-nav-item">Denials</button>
           </Link>
 
           <Link to="/reports">
@@ -95,11 +121,7 @@ const HomePage = () => {
           </Link>
         </nav>
 
-        <div className="hp-sidebar-footer">
-          <p className="hp-footer-title">Logged in as</p>
-          <p className="hp-footer-name">Furkan İslamoğlu</p>
-          <p className="hp-footer-role">Frontend Lead</p>
-        </div>
+
       </aside>
 
       {/* Main */}
